@@ -4,12 +4,14 @@
 
   <parent>
     <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-    <artifactId>process-engine-adapters-camunda-8-root</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
+    <version>2025.03.01-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>process-engine-adapters-camunda-8-examples</artifactId>
+  <groupId>dev.bpm-crafters.process-engine-examples</groupId>
+  <artifactId>process-engine-api-example-root-c8</artifactId>
+
   <packaging>pom</packaging>
   <name>Example: Camunda 8 Example Parent</name>
 
@@ -41,12 +43,12 @@
       </dependency>
       <dependency>
         <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-        <artifactId>process-engine-api-adapter-camunda-platform-c8-spring-boot-starter</artifactId>
+        <artifactId>process-engine-adapter-camunda-platform-c8-spring-boot-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-        <artifactId>process-engine-api-examples-java-common-fixture</artifactId>
+        <groupId>dev.bpm-crafters.process-engine-examples</groupId>
+        <artifactId>process-engine-api-example-java-c8-common-fixture</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

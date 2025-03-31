@@ -3,13 +3,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-    <artifactId>process-engine-adapters-camunda-8-examples</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <groupId>dev.bpm-crafters.process-engine-examples</groupId>
+    <artifactId>process-engine-api-example-root-c8</artifactId>
+    <version>2025.03.01-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>process-engine-api-examples-java-common-fixture</artifactId>
+  <artifactId>process-engine-api-example-java-c8-common-fixture</artifactId>
   <name>Example: Java Common Fixture</name>
 
   <dependencies>

@@ -4,12 +4,12 @@
 
   <parent>
     <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-    <artifactId>process-engine-adapters-camunda-8-root</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
+    <version>2025.03.01-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>process-engine-api-adapter-camunda-platform-c8-core</artifactId>
+  <artifactId>process-engine-adapter-camunda-platform-c8-core</artifactId>
   <name>Adapter: C8 Core</name>
   <dependencies>
     <dependency>
@@ -26,13 +26,13 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-client-java</artifactId>
-      <version>8.6.10</version>
+      <version>${zeebe-client-java.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-tasklist-client-java</artifactId>
-      <version>8.6.8</version>
+      <version>${camunda-tasklist-client-java.version}</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -42,6 +42,7 @@
       </exclusions>
     </dependency>
 
+    <!-- This dependencies have to be provided if someone is using the testing stage -->
     <!-- For JGiven Testing -->
     <dependency>
       <groupId>com.tngtech.jgiven</groupId>
@@ -58,13 +59,13 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-process-test-assertions</artifactId>
-      <version>8.6.10</version>
+      <version>${zeebe-process-test-assertions.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-process-test-extension-testcontainer</artifactId>
-      <version>8.6.10</version>
+      <version>${zeebe-process-test-extension-testcontainer.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

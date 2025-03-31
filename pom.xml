@@ -10,8 +10,8 @@
   </parent>
 
   <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-  <artifactId>process-engine-adapters-camunda-8-root</artifactId>
-  <version>0.5.1-SNAPSHOT</version>
+  <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
+  <version>2025.03.01-SNAPSHOT</version>
   <name>POM: Camunda 8 Adapter Project root</name>
   <description>Process Engine Adapters Camunda 8</description>
   <url>https://github.com/bpm-crafters/process-engine-adapters-camunda-8/</url>
@@ -20,7 +20,14 @@
   <properties>
     <!-- COMMON GLOBAL -->
     <spring-boot.version>3.4.3</spring-boot.version>
-    <process-engine-api.version>0.9.0-SNAPSHOT</process-engine-api.version>
+    <process-engine-api.version>0.9.0</process-engine-api.version>
+    <!-- C8 -->
+    <zeebe-client-java.version>8.6.10</zeebe-client-java.version>
+    <spring-boot-starter-camunda-sdk.version>8.6.10</spring-boot-starter-camunda-sdk.version>
+    <camunda-tasklist-client-java.version>8.6.8</camunda-tasklist-client-java.version>
+    <zeebe-process-test-assertions.version>8.6.10</zeebe-process-test-assertions.version>
+    <zeebe-process-test-extension-testcontainer.version>8.6.10</zeebe-process-test-extension-testcontainer.version>
+
     <!-- TEST -->
     <mockito.version>5.4.0</mockito.version>
     <assertj.version>3.27.3</assertj.version>
@@ -28,12 +35,14 @@
     <jgiven.version>2.0.1</jgiven.version>
     <awaitility.version>4.3.0</awaitility.version>
     <mockk.version>1.13.17</mockk.version>
+    <slf4j.verion>2.0.17</slf4j.verion>
+
   </properties>
 
   <modules>
     <module>engine-adapter/adapter-testing</module>
-    <module>engine-adapter/camunda-platform-8-core</module>
-    <module>engine-adapter/camunda-platform-8-spring-boot-starter</module>
+    <module>engine-adapter/c8-core</module>
+    <module>engine-adapter/c8-spring-boot-starter</module>
     <module>bom</module>
     <!-- more modules see profiles -->
   </modules>
@@ -70,12 +79,12 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>2.0.17</version>
+        <version>${slf4j.verion}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
-        <version>2.0.17</version>
+        <version>${slf4j.verion}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
