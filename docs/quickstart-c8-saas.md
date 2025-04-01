@@ -1,4 +1,6 @@
-## Camunda Platform 8 as SaaS
+---
+title: Camunda Platform 8 as SaaS
+---
 
 If you start with a Camunda Platform 8, operated as SaaS, the following configuration is applicable for you.
 
