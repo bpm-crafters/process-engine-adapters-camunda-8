@@ -4,6 +4,8 @@
 [![incubating](https://img.shields.io/badge/lifecycle-INCUBATING-orange.svg)](https://github.com/holisticon#open-source-lifecycle)
 [![Development branches](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/actions/workflows/development.yml/badge.svg)](https://github.com/bpm-crafters/process-engine-adapters-coamunda-8/actions/workflows/development.yml)
 [![Maven Central Version](https://img.shields.io/maven-central/v/dev.bpm-crafters.process-engine-adapters/process-engine-adapter-camunda-platform-c8-bom)](https://maven-badges.herokuapp.com/maven-central/dev.bpm-crafters.process-engine-adapters/process-engine-adapter-camunda-platform-c8-bom)
+[![Camunda Platform 8](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-26d07c)](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-26d07c)
+
 
 
 ## Purpose of the library
