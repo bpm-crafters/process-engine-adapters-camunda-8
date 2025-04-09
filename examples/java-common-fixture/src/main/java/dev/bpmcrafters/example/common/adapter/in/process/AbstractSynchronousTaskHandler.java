@@ -57,7 +57,7 @@ public abstract class AbstractSynchronousTaskHandler {
             );
           }
         },
-        (taskId) -> {} // nothing to do
+        (TaskInformation taskInformation) -> {} // nothing to do
       )
     ).get();
   }
