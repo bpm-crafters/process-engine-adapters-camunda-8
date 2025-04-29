@@ -19,7 +19,7 @@
 
   <properties>
     <!-- COMMON GLOBAL -->
-    <spring-boot.version>3.4.4</spring-boot.version>
+    <spring-boot.version>3.4.5</spring-boot.version>
     <process-engine-api.version>1.0</process-engine-api.version>
     <!-- C8 -->
     <zeebe-client-java.version>8.6.12</zeebe-client-java.version>
