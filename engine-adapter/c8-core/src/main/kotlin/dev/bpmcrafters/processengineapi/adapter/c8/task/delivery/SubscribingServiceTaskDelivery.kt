@@ -4,6 +4,7 @@ import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.impl.task.filterBySubscription
+import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.zeebe.client.ZeebeClient
 import io.camunda.zeebe.client.api.response.ActivatedJob
@@ -50,7 +51,7 @@ class SubscribingServiceTaskDelivery(
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
       try {
         logger.debug { "PROCESS-ENGINE-C8-051: Delivering service task ${job.key}." }
-        activeSubscription.action.accept(job.toTaskInformation(), variables)
+        activeSubscription.action.accept(job.toTaskInformation().withReason(TaskInformation.CREATE), variables)
         logger.debug { "PROCESS-ENGINE-C8-052: Successfully delivered service task ${job.key}." }
       } catch (e: Exception) {
         logger.error { "PROCESS-ENGINE-C8-051: Failing to deliver service task ${job.key}: ${e.message}." }

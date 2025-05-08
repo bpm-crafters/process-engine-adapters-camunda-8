@@ -4,6 +4,7 @@ import dev.bpmcrafters.processengineapi.Empty
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
 import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
+import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
 import io.camunda.zeebe.client.ZeebeClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -26,7 +27,7 @@ class C8ZeebeUserTaskCompletionApiImpl(
       .join()
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
       logger.debug { "PROCESS-ENGINE-C8-013: successfully completed user task ${cmd.taskId}." }
-      termination.accept(cmd.taskId)
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
     }
     return CompletableFuture.completedFuture(Empty)
   }
@@ -40,8 +41,8 @@ class C8ZeebeUserTaskCompletionApiImpl(
       .join()
     logger.debug { "PROCESS-ENGINE-C8-013: throwing error ${cmd.errorCode} in user task ${cmd.taskId}." }
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
-      termination.accept(cmd.taskId)
       logger.debug { "PROCESS-ENGINE-C8-013: successfully thrown error ${cmd.errorCode} in user task ${cmd.taskId}." }
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
     }
     return CompletableFuture.completedFuture(Empty)
   }
