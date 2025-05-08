@@ -4,6 +4,7 @@ import dev.bpmcrafters.processengineapi.Empty
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
 import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
+import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
 import io.camunda.tasklist.CamundaTaskListClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -21,7 +22,7 @@ class C8TaskListClientUserTaskCompletionApiImpl(
     logger.debug { "PROCESS-ENGINE-C8-006: completing service task ${cmd.taskId}." }
     taskListClient.completeTask(cmd.taskId, cmd.get())
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
-      termination.accept(cmd.taskId)
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
       logger.debug { "PROCESS-ENGINE-C8-007: successfully completed service task ${cmd.taskId}." }
     }
     return CompletableFuture.completedFuture(Empty)

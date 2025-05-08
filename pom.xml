@@ -20,7 +20,7 @@
   <properties>
     <!-- COMMON GLOBAL -->
     <spring-boot.version>3.4.5</spring-boot.version>
-    <process-engine-api.version>1.0</process-engine-api.version>
+    <process-engine-api.version>1.1</process-engine-api.version>
     <!-- C8 -->
     <zeebe-client-java.version>8.7.1</zeebe-client-java.version>
     <spring-boot-starter-camunda-sdk.version>8.6.12</spring-boot-starter-camunda-sdk.version>

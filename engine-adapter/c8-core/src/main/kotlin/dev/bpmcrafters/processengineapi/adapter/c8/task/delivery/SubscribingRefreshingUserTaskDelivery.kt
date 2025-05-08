@@ -5,6 +5,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.SubscribingUserTaskDeliv
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.impl.task.filterBySubscription
+import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskSubscription
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.zeebe.client.ZeebeClient
@@ -63,7 +64,7 @@ class SubscribingRefreshingUserTaskDelivery(
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
       try {
         logger.debug { "PROCESS-ENGINE-C8-041: Delivering user task ${job.key}." }
-        activeSubscription.action.accept(job.toTaskInformation(), variables)
+        activeSubscription.action.accept(job.toTaskInformation().withReason(TaskInformation.CREATE), variables)
         logger.debug { "PROCESS-ENGINE-C8-042: Successfully delivered user task ${job.key}." }
       } catch (e: Exception) {
         logger.error { "PROCESS-ENGINE-C8-043: Failed to deliver user task ${job.key}: ${e.message}" }
@@ -104,7 +105,7 @@ class SubscribingRefreshingUserTaskDelivery(
             Status.Code.NOT_FOUND -> {
               subscriptionRepository.getActiveSubscriptionForTask(taskId)?.let {
                 logger.trace { "PROCESS-ENGINE-C8-050: User task is gone, sending termination to the handler." }
-                it.termination.accept(taskId)
+                it.termination.accept(TaskInformation(taskId, mapOf()).withReason(TaskInformation.DELETE))
                 subscriptionRepository.deactivateSubscriptionForTask(taskId)
                 logger.trace { "PROCESS-ENGINE-C8-051: Termination sent to handler and user task is removed." }
               }

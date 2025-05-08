@@ -2,10 +2,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8.task.completion
 
 import dev.bpmcrafters.processengineapi.Empty
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
-import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
-import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
-import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
-import dev.bpmcrafters.processengineapi.task.FailTaskCmd
+import dev.bpmcrafters.processengineapi.task.*
 import io.camunda.zeebe.client.ZeebeClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
@@ -28,7 +25,7 @@ class C8ZeebeExternalServiceTaskCompletionApiImpl(
       .send()
       .join()
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
-      termination.accept(cmd.taskId)
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
       logger.debug { "PROCESS-ENGINE-C8-009: successfully completed service task ${cmd.taskId}." }
     }
     return CompletableFuture.completedFuture(Empty)
@@ -45,7 +42,7 @@ class C8ZeebeExternalServiceTaskCompletionApiImpl(
       .join()
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
       logger.debug { "PROCESS-ENGINE-C8-009: successfully thrown error ${cmd.errorCode} in service task ${cmd.taskId}." }
-      termination.accept(cmd.taskId)
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
     }
     return CompletableFuture.completedFuture(Empty)
   }
@@ -61,8 +58,8 @@ class C8ZeebeExternalServiceTaskCompletionApiImpl(
       .join()
     logger.debug { "PROCESS-ENGINE-C8-010: failing service task ${cmd.taskId}." }
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
-      termination.accept(cmd.taskId)
       logger.debug { "PROCESS-ENGINE-C8-011: successfully failed service task ${cmd.taskId}." }
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
     }
     return CompletableFuture.completedFuture(Empty)
   }
