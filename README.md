@@ -53,7 +53,7 @@ If you want to rely on versions we used during creation of this library, you may
 
 | Adapter-8 Version | Camunda 8 Version | API Version |
 |-------------------|-------------------|-------------|
-| 2025.05.1         | 8.7.1             | 1.1         |
+| 2025.05.1         | 8.7.2             | 1.1         |
 | 2025.04.1         | 8.6.12            | 1.0         |
 
 
