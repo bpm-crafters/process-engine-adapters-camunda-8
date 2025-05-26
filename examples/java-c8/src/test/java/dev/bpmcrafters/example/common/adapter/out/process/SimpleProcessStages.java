@@ -20,7 +20,7 @@ public class SimpleProcessStages {
     private WorkflowOutPort workflowOutPort;
     @ProvidedScenarioState
     private UserTaskOutPort userTaskOutPort;
-    private String correlationKey;
+    private String correlationValue;
 
     @Override
     public void initialize() {
@@ -41,7 +41,7 @@ public class SimpleProcessStages {
     public ActionStage simple_process_started(@Quoted String value, @Quoted Integer intValue) {
       String instanceId = workflowOutPort.startSimpleProcess(value, intValue);
       assertThat(instanceId).isNotNull();
-      this.correlationKey = value;
+      this.correlationValue = value;
       return self();
     }
 
@@ -93,14 +93,14 @@ public class SimpleProcessStages {
     @As("message received with $value")
     public ActionStage message_received(String value) {
       process_waits_in_element(Elements.EVENT_RECEIVED_MESSAGE);
-      workflowOutPort.correlateMessage(correlationKey, value);
+      workflowOutPort.correlateMessage(correlationValue, value);
       return self();
     }
 
     @As("signal occurred")
     public ActionStage signal_occurred() {
       process_waits_in_element(Elements.EVENT_SIGNAL_OCCURRED);
-      workflowOutPort.deliverSignal(correlationKey);
+      workflowOutPort.deliverSignal(correlationValue);
       return self();
     }
 

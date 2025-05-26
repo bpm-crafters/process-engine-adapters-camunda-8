@@ -8,6 +8,8 @@ import dev.bpmcrafters.processengineapi.correlation.SendSignalCmd
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
 import io.camunda.zeebe.client.ZeebeClient
 import io.camunda.zeebe.client.api.command.BroadcastSignalCommandStep1
+import io.camunda.zeebe.client.api.command.BroadcastSignalCommandStep1.BroadcastSignalCommandStep2
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
@@ -27,7 +29,7 @@ class SignalApiImpl(
         .applyRestrictions(cmd.restrictions)
         .variables(cmd.payloadSupplier.get())
         .send()
-        .get() // FIXME Chain
+        .get()
       Empty
     }
   }
@@ -36,10 +38,13 @@ class SignalApiImpl(
     CommonRestrictions.TENANT_ID,
   )
 
-  fun BroadcastSignalCommandStep1.BroadcastSignalCommandStep2.applyRestrictions(restrictions: Map<String, String>) = this.apply {
-    if (restrictions.containsKey(CommonRestrictions.TENANT_ID)) {
-      this.tenantId(restrictions[CommonRestrictions.TENANT_ID])
-    }
+  private fun BroadcastSignalCommandStep2.applyRestrictions(restrictions: Map<String, String>): BroadcastSignalCommandStep2 = this.apply {
+    restrictions
+      .forEach { (key, value) ->
+        when (key) {
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+        }
+      }
   }
 
   override fun meta(instance: MetaInfoAware): MetaInfo {
