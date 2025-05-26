@@ -30,7 +30,7 @@ class DeploymentApiImpl(
             val remaining = cmd.resources.subList(1, cmd.resources.size)
             remaining.forEach { resource -> this.addResourceStream(resource.resourceStream, resource.name) }
           }
-          if (cmd.tenantId != null) {
+          if (!cmd.tenantId.isNullOrBlank()) {
             this.tenantId(cmd.tenantId)
           }
         }

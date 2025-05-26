@@ -5,6 +5,10 @@ import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
 import dev.bpmcrafters.processengineapi.process.*
 import io.camunda.zeebe.client.ZeebeClient
+import io.camunda.zeebe.client.api.command.CreateProcessInstanceCommandStep1
+import io.camunda.zeebe.client.api.command.CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
 import io.camunda.zeebe.client.api.response.ProcessInstanceEvent
 import io.camunda.zeebe.client.api.response.PublishMessageResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -27,6 +31,7 @@ class StartProcessApiImpl(
             .bpmnProcessId(cmd.definitionKey)
             .latestVersion()
             .variables(cmd.payloadSupplier.get())
+            .applyRestrictions(ensureSupported(cmd.restrictions))
             .send()
             .get()
             .toProcessInformation()
@@ -39,6 +44,7 @@ class StartProcessApiImpl(
             .messageName(cmd.messageName)
             .correlationKey("") // empty means create a new instance
             .variables(cmd.payloadSupplier.get())
+            .applyRestrictions(ensureSupported(cmd.restrictions))
             .send()
             .get()
             .toProcessInformation()
@@ -46,6 +52,33 @@ class StartProcessApiImpl(
       else -> throw IllegalArgumentException("Unsupported start command $cmd")
     }
   }
+
+  override fun meta(instance: MetaInfoAware): MetaInfo {
+    TODO("Not yet implemented")
+  }
+
+  override fun getSupportedRestrictions(): Set<String>  = setOf(
+    CommonRestrictions.TENANT_ID
+  )
+
+  private fun CreateProcessInstanceCommandStep3.applyRestrictions(restrictions: Map<String, String>): CreateProcessInstanceCommandStep3 = this.apply {
+    restrictions
+      .forEach { (key, value) ->
+        when (key) {
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+        }
+      }
+  }
+
+  private fun PublishMessageCommandStep3.applyRestrictions(restrictions: Map<String, String>): PublishMessageCommandStep3 = this.apply {
+    restrictions
+      .forEach { (key, value) ->
+        when (key) {
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+        }
+      }
+  }
+
 
   private fun ProcessInstanceEvent.toProcessInformation() = ProcessInformation(
     instanceId = "${this.processInstanceKey}",
@@ -59,11 +92,8 @@ class StartProcessApiImpl(
   private fun PublishMessageResponse.toProcessInformation() = ProcessInformation(
     instanceId = "",
     meta = mapOf(
-
+      CommonRestrictions.TENANT_ID to this.tenantId
     )
   )
 
-  override fun meta(instance: MetaInfoAware): MetaInfo {
-    TODO("Not yet implemented")
-  }
 }

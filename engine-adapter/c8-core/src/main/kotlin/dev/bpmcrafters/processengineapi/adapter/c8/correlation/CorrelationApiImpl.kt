@@ -1,11 +1,13 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.correlation
 
+import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.Empty
 import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
 import dev.bpmcrafters.processengineapi.correlation.CorrelateMessageCmd
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
 import io.camunda.zeebe.client.ZeebeClient
+import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
@@ -25,8 +27,9 @@ class CorrelationApiImpl(
         .messageName(cmd.messageName)
         .correlationKey(correlationKey)
         .variables(cmd.payloadSupplier.get())
+        .applyRestrictions(ensureSupported(cmd.restrictions))
         .send()
-        .get() // FIXME Chain
+        .get()
       Empty
     }
   }
@@ -35,5 +38,18 @@ class CorrelationApiImpl(
     TODO("Not yet implemented")
   }
 
-  override fun getSupportedRestrictions(): Set<String> = setOf()
+  override fun getSupportedRestrictions(): Set<String> = setOf(
+    CommonRestrictions.TENANT_ID
+  )
+
+
+  private fun PublishMessageCommandStep3.applyRestrictions(restrictions: Map<String, String>): PublishMessageCommandStep3 = this.apply {
+    restrictions
+      .forEach { (key, value) ->
+        when (key) {
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+        }
+      }
+  }
+
 }
