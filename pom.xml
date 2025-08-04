@@ -26,7 +26,7 @@
     <spring-boot-starter-camunda-sdk.version>8.7.3</spring-boot-starter-camunda-sdk.version>
     <camunda-tasklist-client-java.version>8.7.1</camunda-tasklist-client-java.version>
 
-    <zeebe-process-test-assertions.version>8.7.3</zeebe-process-test-assertions.version>
+    <zeebe-process-test-assertions.version>8.7.9</zeebe-process-test-assertions.version>
     <zeebe-process-test-extension-testcontainer.version>8.7.3</zeebe-process-test-extension-testcontainer.version>
 
     <!-- TEST -->
