@@ -95,6 +95,41 @@ class C8ZeebeExternalServiceTaskCompletionApiImplTest {
   }
 
   @Test
+  fun `fail task takes retries from fail task command in Zeebe`() {
+    // GIVEN
+    val failJobCommandStep1: FailJobCommandStep1 = mockk()
+    val failJobCommandStep2: FailJobCommandStep2 = mockk()
+    val zeebeFuture: ZeebeFuture<FailJobResponse> = mockk(relaxed = true)
+
+    every { failureRetrySupplier.apply(any()) } returns FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF)
+    every { zeebeClient.newFailCommand(TASK_ID.toLong()) } returns failJobCommandStep1
+    every { failJobCommandStep1.retries(any()) } returns failJobCommandStep2
+    every { failJobCommandStep2.retryBackoff(any()) } returns failJobCommandStep2
+    every { failJobCommandStep2.errorMessage(any()) } returns failJobCommandStep2
+    every { failJobCommandStep2.send() } returns zeebeFuture
+
+    val retryCount = 3
+    val retryBackoff = Duration.ofSeconds(10)
+
+    // WHEN
+    taskCompletionApi.failTask(
+      FailTaskCmd(
+        taskId = TASK_ID,
+        reason = REASON,
+        errorDetails = null,
+        retryCount = retryCount,
+        retryBackoff = retryBackoff
+      )
+    )
+
+    // THEN
+    verify { failJobCommandStep1.retries(retryCount) }
+    verify { failJobCommandStep2.retryBackoff(retryBackoff) }
+    verify { failJobCommandStep2.errorMessage(REASON) }
+    verify { failJobCommandStep2.send() }
+  }
+
+  @Test
   fun `complete task by error in Zeebe`() {
     // GIVEN
     val throwErrorCommandStep1: ThrowErrorCommandStep1 = mockk()

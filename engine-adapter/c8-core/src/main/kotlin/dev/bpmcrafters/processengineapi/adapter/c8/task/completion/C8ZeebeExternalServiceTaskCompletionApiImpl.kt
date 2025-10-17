@@ -51,8 +51,8 @@ class C8ZeebeExternalServiceTaskCompletionApiImpl(
     val (retries, retriesTimeout) = failureRetrySupplier.apply(cmd.taskId)
     zeebeClient
       .newFailCommand(cmd.taskId.toLong())
-      .retries(retries)
-      .retryBackoff(Duration.ofSeconds(retriesTimeout))
+      .retries(cmd.retryCount ?: retries)
+      .retryBackoff(cmd.retryBackoff ?: Duration.ofSeconds(retriesTimeout))
       .errorMessage(cmd.reason)
       .send()
       .join()

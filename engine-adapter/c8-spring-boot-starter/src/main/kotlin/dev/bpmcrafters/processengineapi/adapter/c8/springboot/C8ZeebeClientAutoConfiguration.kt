@@ -48,7 +48,8 @@ class C8ZeebeClientAutoConfiguration {
   ) = SubscribingServiceTaskDelivery(
     subscriptionRepository = subscriptionRepository,
     zeebeClient = zeebeClient,
-    workerId = c8AdapterProperties.serviceTasks.workerId
+    workerId = c8AdapterProperties.serviceTasks.workerId,
+    retryTimeoutInSeconds = c8AdapterProperties.serviceTasks.retryTimeoutInSeconds
   )
 
   @Bean(name = ["c8-user-task-delivery"])
