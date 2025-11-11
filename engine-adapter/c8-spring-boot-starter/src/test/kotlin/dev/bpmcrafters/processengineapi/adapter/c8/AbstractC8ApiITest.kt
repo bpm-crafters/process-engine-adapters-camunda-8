@@ -12,8 +12,8 @@ import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.test.JGivenSpringBaseIntegrationTest
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.DeploymentEvent
+import io.camunda.process.test.api.CamundaProcessTest
 import io.camunda.tasklist.CamundaTaskListClient
-import io.camunda.zeebe.process.test.extension.testcontainer.ZeebeProcessTest
 import io.toolisticon.testing.jgiven.GIVEN
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -28,7 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
   classes = [C8TestApplication::class],
   webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
-@ZeebeProcessTest
+@CamundaProcessTest
 @ActiveProfiles("itest")
 @DirtiesContext
 abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {

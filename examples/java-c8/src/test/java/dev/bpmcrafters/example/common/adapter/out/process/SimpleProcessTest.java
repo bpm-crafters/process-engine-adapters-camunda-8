@@ -5,27 +5,23 @@ import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst.Elements;
 import dev.bpmcrafters.processengineapi.CommonRestrictions;
 import io.camunda.client.CamundaClient;
-import io.camunda.zeebe.process.test.api.ZeebeTestEngine;
-import io.camunda.zeebe.process.test.extension.testcontainer.ZeebeProcessTest;
-import org.camunda.community.process_test_coverage.junit5.platform8.ProcessEngineCoverageExtension;
+import io.camunda.process.test.api.CamundaProcessTest;
+import io.camunda.process.test.api.CamundaProcessTestContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
-@ZeebeProcessTest
+@CamundaProcessTest
 public class SimpleProcessTest extends DualScenarioTest<SimpleProcessStages.ActionStage, SimpleProcessStages.AssertStage> {
 
-  @RegisterExtension
-  static ProcessEngineCoverageExtension coverageExtension = ProcessEngineCoverageExtension.builder().build();
   private CamundaClient client;
-  private ZeebeTestEngine engine;
+  private CamundaProcessTestContext processTestContext;
 
   @BeforeEach
   public void setup() {
     given()
       .initializeEngine(
         client,
-        engine,
+        processTestContext,
         CommonRestrictions.builder()
           .withProcessDefinitionKey(SimpleProcessWorkflowConst.KEY)
           .build())

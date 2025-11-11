@@ -25,6 +25,12 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
+      <artifactId>zeebe-protocol</artifactId>
+      <version>${zeebe-client-java.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.camunda</groupId>
       <artifactId>camunda-client-java</artifactId>
       <version>${zeebe-client-java.version}</version>
       <scope>provided</scope>
@@ -58,14 +64,8 @@
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>zeebe-process-test-assertions</artifactId>
-      <version>${zeebe-process-test-assertions.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>zeebe-process-test-extension-testcontainer</artifactId>
-      <version>${zeebe-process-test-extension-testcontainer.version}</version>
+      <artifactId>camunda-process-test-spring</artifactId>
+      <version>${camunda-process-test.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
