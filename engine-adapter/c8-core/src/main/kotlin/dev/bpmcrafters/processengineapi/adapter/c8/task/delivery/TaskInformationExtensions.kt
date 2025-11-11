@@ -21,6 +21,7 @@ fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
     "candidateGroups" to this.customHeaders.getOrDefault(Protocol.USER_TASK_CANDIDATE_GROUPS_HEADER_NAME, null),
     "followUpDate" to this.customHeaders.getOrDefault(Protocol.USER_TASK_FOLLOW_UP_DATE_HEADER_NAME, null),
     "topicName" to this.type,
+    TaskInformation.RETRIES to this.retries.toString(),
   )
 )
 

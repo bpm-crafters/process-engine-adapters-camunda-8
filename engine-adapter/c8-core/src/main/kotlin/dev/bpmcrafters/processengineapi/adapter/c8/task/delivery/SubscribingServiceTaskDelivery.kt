@@ -10,6 +10,7 @@ import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
@@ -19,7 +20,8 @@ private val logger = KotlinLogging.logger {}
 class SubscribingServiceTaskDelivery(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
-  private val workerId: String
+  private val workerId: String,
+    private val retryTimeoutInSeconds: Long
 ) {
 
   fun subscribe() {
@@ -54,7 +56,8 @@ class SubscribingServiceTaskDelivery(
         logger.debug { "PROCESS-ENGINE-C8-052: Successfully delivered service task ${job.key}." }
       } catch (e: Exception) {
         logger.error { "PROCESS-ENGINE-C8-051: Failing to deliver service task ${job.key}: ${e.message}." }
-        camundaClient.newFailCommand(job.key).retries(job.retries).send().join() // could not deliver
+        camundaClient.newFailCommand(job.key).retries(job.retries)
+          .retryBackoff(Duration.ofSeconds(retryTimeoutInSeconds)).send().join() // could not deliver
         subscriptionRepository.deactivateSubscriptionForTask(taskId = "${job.key}")
         logger.error { "PROCESS-ENGINE-C8-052: Successfully failed to deliver service task ${job.key}: ${e.message}." }
       }
@@ -62,7 +65,8 @@ class SubscribingServiceTaskDelivery(
       // put it back
       // TODO: check this, is it ok to put the job this way back?
       logger.trace { "PROCESS-ENGINE-C8-053: Received service task ${job.key} not matching subscriptions, returning it." }
-      camundaClient.newFailCommand(job.key).retries(job.retries + 1).send().join()
+      camundaClient.newFailCommand(job.key).retries(job.retries + 1)
+        .retryBackoff(Duration.ofSeconds(retryTimeoutInSeconds)).send().join()
       logger.trace { "PROCESS-ENGINE-C8-045: Successfully returned service task ${job.key} not matching subscriptions." }
     }
 

@@ -50,8 +50,8 @@ class C8ExternalServiceTaskCompletionApiImpl(
     val (retries, retriesTimeout) = failureRetrySupplier.apply(cmd.taskId)
     camundaClient
       .newFailCommand(cmd.taskId.toLong())
-      .retries(retries)
-      .retryBackoff(Duration.ofSeconds(retriesTimeout))
+      .retries(cmd.retryCount ?: retries)
+      .retryBackoff(cmd.retryBackoff ?: Duration.ofSeconds(retriesTimeout))
       .errorMessage(cmd.reason)
       .send()
       .join()

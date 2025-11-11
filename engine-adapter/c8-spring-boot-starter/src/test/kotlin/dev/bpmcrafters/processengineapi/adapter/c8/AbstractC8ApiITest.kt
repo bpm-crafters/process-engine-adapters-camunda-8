@@ -72,7 +72,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
       ),
       taskSubscriptionApi = C8TaskSubscriptionApiImpl(subscriptionRepository, userTaskDelivery),
       subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
-        client, subscriptionRepository, workerId
+        client, subscriptionRepository, workerId, 3L
       ),
       pullUserTaskDelivery = PullUserTaskDelivery(taskListClient = camundaTaskListClient, subscriptionRepository = subscriptionRepository),
       subscribingUserTaskDelivery = userTaskDelivery,
