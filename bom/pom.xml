@@ -31,8 +31,8 @@
       </dependency>
       <dependency>
         <groupId>io.camunda</groupId>
-        <artifactId>zeebe-client-java</artifactId>
-        <version>${zeebe-client-java.version}</version>
+        <artifactId>camunda-client-java</artifactId>
+        <version>${camunda-client-java.version}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -42,23 +42,18 @@
         <exclusions>
           <exclusion>
             <groupId>io.camunda</groupId>
-            <artifactId>zeebe-client-java</artifactId>
+            <artifactId>camunda-client-java</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
 
       <dependency>
         <groupId>io.camunda</groupId>
-        <artifactId>zeebe-process-test-assertions</artifactId>
-        <version>${zeebe-process-test-assertions.version}</version>
-        <scope>test</scope>
+        <artifactId>camunda-process-test-spring</artifactId>
+        <version>${camunda-process-test.version}</version>
+        <scope>compile</scope>
       </dependency>
-      <dependency>
-        <groupId>io.camunda</groupId>
-        <artifactId>zeebe-process-test-extension-testcontainer</artifactId>
-        <version>${zeebe-process-test-extension-testcontainer.version}</version>
-        <scope>test</scope>
-      </dependency>
+
     </dependencies>
   </dependencyManagement>
 </project>

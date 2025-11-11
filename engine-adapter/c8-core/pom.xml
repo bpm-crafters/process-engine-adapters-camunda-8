@@ -26,13 +26,13 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-protocol</artifactId>
-      <version>${zeebe-client-java.version}</version>
+      <version>${camunda-client-java.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-client-java</artifactId>
-      <version>${zeebe-client-java.version}</version>
+      <version>${camunda-client-java.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
