@@ -10,8 +10,8 @@ import dev.bpmcrafters.processengineapi.adapter.c8.correlation.CorrelationApiImp
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ZeebeExternalServiceTaskCompletionApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ZeebeUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
@@ -24,8 +24,8 @@ import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
 import dev.bpmcrafters.processengineapi.deploy.NamedResource.Companion.fromClasspath
 import dev.bpmcrafters.processengineapi.process.StartProcessApi
 import dev.bpmcrafters.processengineapi.task.*
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.response.ActivatedJob
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.response.ActivatedJob
 import io.camunda.zeebe.process.test.api.ZeebeTestEngine
 import io.camunda.zeebe.process.test.filters.RecordStream
 import io.camunda.zeebe.protocol.record.Record
@@ -47,7 +47,7 @@ import java.util.stream.StreamSupport
 abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>> : Stage<SUBTYPE>() {
 
   @ProvidedScenarioState
-  protected lateinit var client: ZeebeClient
+  protected lateinit var client: CamundaClient
 
   @ProvidedScenarioState
   protected lateinit var engine: ZeebeTestEngine
@@ -97,7 +97,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
    * @param restrictions list of restrictions used in task subscription API. Usually, contains a restriction to the process definition key. Please use `CommonRestrictions` builder.
    */
   open fun initializeEngine(
-    client: ZeebeClient,
+    client: CamundaClient,
     engine: ZeebeTestEngine,
     restrictions: Map<String, String>
   ): SUBTYPE {
@@ -109,8 +109,8 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
 
     startProcessApi = StartProcessApiImpl(this.client)
     deploymentApi = DeploymentApiImpl(this.client)
-    userTaskCompletionApi = C8ZeebeUserTaskCompletionApiImpl(this.client, subscriptionRepository)
-    serviceTaskCompletionApi = C8ZeebeExternalServiceTaskCompletionApiImpl(
+    userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository)
+    serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
       this.client,
       subscriptionRepository,
       LinearMemoryFailureRetrySupplier(3, 3L)

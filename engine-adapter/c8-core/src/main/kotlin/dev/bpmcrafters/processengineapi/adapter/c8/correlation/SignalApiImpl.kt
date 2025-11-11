@@ -6,24 +6,21 @@ import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
 import dev.bpmcrafters.processengineapi.correlation.SendSignalCmd
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.command.BroadcastSignalCommandStep1
-import io.camunda.zeebe.client.api.command.BroadcastSignalCommandStep1.BroadcastSignalCommandStep2
-import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.command.BroadcastSignalCommandStep1.BroadcastSignalCommandStep2
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private val logger = KotlinLogging.logger {}
 
 class SignalApiImpl(
-  private val zeebeClient: ZeebeClient
+  private val camundaClient: CamundaClient
 ) : SignalApi {
 
-  override fun sendSignal(cmd: SendSignalCmd): Future<Empty> {
+  override fun sendSignal(cmd: SendSignalCmd): CompletableFuture<Empty> {
     return CompletableFuture.supplyAsync {
       logger.debug { "PROCESS-ENGINE-C8-002: Sending signal ${cmd.signalName}." }
-      zeebeClient
+      camundaClient
         .newBroadcastSignalCommand()
         .signalName(cmd.signalName)
         .applyRestrictions(cmd.restrictions)
@@ -42,7 +39,9 @@ class SignalApiImpl(
     restrictions
       .forEach { (key, value) ->
         when (key) {
-          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) {
+            this.tenantId(value)
+          }
         }
       }
   }

@@ -1,8 +1,8 @@
 package dev.bpmcrafters.example.javac8;
 
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties;
+import io.camunda.client.spring.properties.CamundaClientProperties;
 import io.camunda.tasklist.CamundaTaskListClient;
-import io.camunda.zeebe.spring.client.properties.CamundaClientProperties;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
@@ -44,7 +44,7 @@ public class JavaCamunda8ExampleApplication {
         builder = builder.selfManagedAuthentication(
           clientProperties.getAuth().getClientId(),
           clientProperties.getAuth().getClientSecret(),
-          clientProperties.getAuth().getIssuer()
+          clientProperties.getAuth().getTokenUrl().toASCIIString()
         );
     }
 

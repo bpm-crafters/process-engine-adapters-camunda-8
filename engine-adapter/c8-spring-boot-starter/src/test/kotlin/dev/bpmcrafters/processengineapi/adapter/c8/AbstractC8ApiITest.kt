@@ -1,8 +1,8 @@
 package dev.bpmcrafters.processengineapi.adapter.c8
 
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ZeebeExternalServiceTaskCompletionApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ZeebeUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
@@ -10,9 +10,9 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServ
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.test.JGivenSpringBaseIntegrationTest
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.response.DeploymentEvent
 import io.camunda.tasklist.CamundaTaskListClient
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.response.DeploymentEvent
 import io.camunda.zeebe.process.test.extension.testcontainer.ZeebeProcessTest
 import io.toolisticon.testing.jgiven.GIVEN
 import org.assertj.core.api.Assertions.assertThat
@@ -42,7 +42,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
     const val EXTERNAL_TASK = "execute-action-external"
   }
 
-  lateinit var client: ZeebeClient
+  lateinit var client: CamundaClient
 
   /*
    * We have no task list in test, so there is no need for the real client either
@@ -63,9 +63,9 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
 
     this.processTestHelper = C8ProcessTestHelper(
 
-      startProcessApi = StartProcessApiImpl(zeebeClient = client),
-      userTaskCompletionApi = C8ZeebeUserTaskCompletionApiImpl(this.client, subscriptionRepository),
-      serviceTaskCompletionApi = C8ZeebeExternalServiceTaskCompletionApiImpl(
+      startProcessApi = StartProcessApiImpl(camundaClient = client),
+      userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository),
+      serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
         this.client,
         subscriptionRepository,
         LinearMemoryFailureRetrySupplier(3, 3L)

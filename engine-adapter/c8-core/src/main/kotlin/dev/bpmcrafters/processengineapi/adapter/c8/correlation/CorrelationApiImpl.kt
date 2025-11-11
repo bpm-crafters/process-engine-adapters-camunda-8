@@ -6,23 +6,22 @@ import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
 import dev.bpmcrafters.processengineapi.correlation.CorrelateMessageCmd
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private val logger = KotlinLogging.logger {}
 
 class CorrelationApiImpl(
-  private val zeebeClient: ZeebeClient
+  private val camundaClient: CamundaClient
 ) : CorrelationApi {
 
-  override fun correlateMessage(cmd: CorrelateMessageCmd): Future<Empty> {
+  override fun correlateMessage(cmd: CorrelateMessageCmd): CompletableFuture<Empty> {
     return CompletableFuture.supplyAsync {
       val correlationKey = cmd.correlation.get().correlationKey
       logger.debug { "PROCESS-ENGINE-C8-001: Correlating message ${cmd.messageName} using correlation key value $correlationKey." }
-      zeebeClient
+      camundaClient
         .newPublishMessageCommand()
         .messageName(cmd.messageName)
         .correlationKey(correlationKey)

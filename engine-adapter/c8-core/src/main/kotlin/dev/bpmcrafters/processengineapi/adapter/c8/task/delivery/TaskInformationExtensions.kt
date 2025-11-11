@@ -2,8 +2,8 @@ package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.task.TaskInformation
+import io.camunda.client.api.response.ActivatedJob
 import io.camunda.tasklist.dto.Task
-import io.camunda.zeebe.client.api.response.ActivatedJob
 import io.camunda.zeebe.protocol.Protocol
 
 fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(

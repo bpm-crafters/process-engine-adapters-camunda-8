@@ -6,9 +6,9 @@ import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.impl.task.filterBySubscription
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskType
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.response.ActivatedJob
-import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
@@ -17,9 +17,9 @@ private val logger = KotlinLogging.logger {}
  * Uses task subscription available in the repository to subscribe to zeebe.
  */
 class SubscribingServiceTaskDelivery(
-    private val zeebeClient: ZeebeClient,
-    private val subscriptionRepository: SubscriptionRepository,
-    private val workerId: String
+  private val camundaClient: CamundaClient,
+  private val subscriptionRepository: SubscriptionRepository,
+  private val workerId: String
 ) {
 
   fun subscribe() {
@@ -30,10 +30,10 @@ class SubscribingServiceTaskDelivery(
         .filter { it.taskType == TaskType.EXTERNAL }
         .forEach { activeSubscription ->
           // this is a job to subscribe to.
-          zeebeClient
+          camundaClient
             .newWorker()
             .jobType(activeSubscription.taskDescriptionKey)
-            .handler { _, job -> consumeActivatedJob(activeSubscription, job, zeebeClient) }
+            .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient) }
             .name(workerId)
             .forSubscription(activeSubscription)
             // FIXME -> metrics to setup
@@ -44,7 +44,7 @@ class SubscribingServiceTaskDelivery(
     }
   }
 
-  private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, zeebeClient: ZeebeClient) {
+  private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, camundaClient: CamundaClient) {
     if (activeSubscription.matches(job)) {
       subscriptionRepository.activateSubscriptionForTask("${job.key}", activeSubscription)
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
@@ -54,7 +54,7 @@ class SubscribingServiceTaskDelivery(
         logger.debug { "PROCESS-ENGINE-C8-052: Successfully delivered service task ${job.key}." }
       } catch (e: Exception) {
         logger.error { "PROCESS-ENGINE-C8-051: Failing to deliver service task ${job.key}: ${e.message}." }
-        zeebeClient.newFailCommand(job.key).retries(job.retries).send().join() // could not deliver
+        camundaClient.newFailCommand(job.key).retries(job.retries).send().join() // could not deliver
         subscriptionRepository.deactivateSubscriptionForTask(taskId = "${job.key}")
         logger.error { "PROCESS-ENGINE-C8-052: Successfully failed to deliver service task ${job.key}: ${e.message}." }
       }
@@ -62,7 +62,7 @@ class SubscribingServiceTaskDelivery(
       // put it back
       // TODO: check this, is it ok to put the job this way back?
       logger.trace { "PROCESS-ENGINE-C8-053: Received service task ${job.key} not matching subscriptions, returning it." }
-      zeebeClient.newFailCommand(job.key).retries(job.retries + 1).send().join()
+      camundaClient.newFailCommand(job.key).retries(job.retries + 1).send().join()
       logger.trace { "PROCESS-ENGINE-C8-045: Successfully returned service task ${job.key} not matching subscriptions." }
     }
 

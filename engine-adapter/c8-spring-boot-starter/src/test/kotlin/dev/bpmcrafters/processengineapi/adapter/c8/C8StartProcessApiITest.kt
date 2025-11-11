@@ -1,9 +1,7 @@
 package dev.bpmcrafters.processengineapi.adapter.c8
 
-import io.toolisticon.testing.jgiven.GIVEN
 import io.toolisticon.testing.jgiven.THEN
 import io.toolisticon.testing.jgiven.WHEN
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class C8StartProcessApiITest : AbstractC8ApiITest() {

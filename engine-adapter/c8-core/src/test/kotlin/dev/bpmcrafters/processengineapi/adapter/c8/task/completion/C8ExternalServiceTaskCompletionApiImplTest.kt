@@ -4,15 +4,16 @@ import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
 import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
 import dev.bpmcrafters.processengineapi.task.FailTaskCmd
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.ZeebeFuture
-import io.camunda.zeebe.client.api.command.CompleteJobCommandStep1
-import io.camunda.zeebe.client.api.command.FailJobCommandStep1
-import io.camunda.zeebe.client.api.command.FailJobCommandStep1.FailJobCommandStep2
-import io.camunda.zeebe.client.api.command.ThrowErrorCommandStep1
-import io.camunda.zeebe.client.api.command.ThrowErrorCommandStep1.ThrowErrorCommandStep2
-import io.camunda.zeebe.client.api.response.CompleteJobResponse
-import io.camunda.zeebe.client.api.response.FailJobResponse
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.CamundaFuture
+import io.camunda.client.api.command.CompleteJobCommandStep1
+import io.camunda.client.api.command.FailJobCommandStep1
+import io.camunda.client.api.command.FailJobCommandStep1.FailJobCommandStep2
+import io.camunda.client.api.command.ThrowErrorCommandStep1
+import io.camunda.client.api.command.ThrowErrorCommandStep1.ThrowErrorCommandStep2
+import io.camunda.client.api.response.CompleteJobResponse
+import io.camunda.client.api.response.FailJobResponse
+import io.camunda.client.api.response.ThrowErrorResponse
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 
 
-class C8ZeebeExternalServiceTaskCompletionApiImplTest {
+class C8ExternalServiceTaskCompletionApiImplTest {
 
   companion object {
     const val TASK_ID = "1234"
@@ -31,24 +32,24 @@ class C8ZeebeExternalServiceTaskCompletionApiImplTest {
     val PAYLOAD = mapOf("foo" to "bar")
   }
 
-  private val zeebeClient: ZeebeClient = mockk(relaxUnitFun = true)
+  private val camundaClient: CamundaClient = mockk(relaxUnitFun = true)
   private val subscriptionRepository: SubscriptionRepository = mockk(relaxed = true)
   private val failureRetrySupplier: FailureRetrySupplier = mockk(relaxed = true)
 
-  private val taskCompletionApi = C8ZeebeExternalServiceTaskCompletionApiImpl(
-    zeebeClient,
+  private val taskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
+    camundaClient,
     subscriptionRepository,
     failureRetrySupplier
   )
 
   @Test
-  fun `complete task in Zeebe`() {
+  fun `complete task in Camunda`() {
     // GIVEN
     val completeJobCommandStep1: CompleteJobCommandStep1 = mockk()
-    val zeebeFuture: ZeebeFuture<CompleteJobResponse> = mockk(relaxed = true)
+    val zeebeFuture: CamundaFuture<CompleteJobResponse> = mockk(relaxed = true)
 
     every { failureRetrySupplier.apply(any()) } returns FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF)
-    every { zeebeClient.newCompleteCommand(TASK_ID.toLong()) } returns completeJobCommandStep1
+    every { camundaClient.newCompleteCommand(TASK_ID.toLong()) } returns completeJobCommandStep1
     every { completeJobCommandStep1.variables(PAYLOAD) } returns completeJobCommandStep1
     every { completeJobCommandStep1.send() } returns zeebeFuture
 
@@ -65,14 +66,14 @@ class C8ZeebeExternalServiceTaskCompletionApiImplTest {
   }
 
   @Test
-  fun `fail task in Zeebe`() {
+  fun `fail task in Camunda`() {
     // GIVEN
     val failJobCommandStep1: FailJobCommandStep1 = mockk()
     val failJobCommandStep2: FailJobCommandStep2 = mockk()
-    val zeebeFuture: ZeebeFuture<FailJobResponse> = mockk(relaxed = true)
+    val zeebeFuture: CamundaFuture<FailJobResponse> = mockk(relaxed = true)
 
     every { failureRetrySupplier.apply(any()) } returns FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF)
-    every { zeebeClient.newFailCommand(TASK_ID.toLong()) } returns failJobCommandStep1
+    every { camundaClient.newFailCommand(TASK_ID.toLong()) } returns failJobCommandStep1
     every { failJobCommandStep1.retries(any()) } returns failJobCommandStep2
     every { failJobCommandStep2.retryBackoff(any()) } returns failJobCommandStep2
     every { failJobCommandStep2.errorMessage(any()) } returns failJobCommandStep2
@@ -95,13 +96,13 @@ class C8ZeebeExternalServiceTaskCompletionApiImplTest {
   }
 
   @Test
-  fun `complete task by error in Zeebe`() {
+  fun `complete task by error in Camunda`() {
     // GIVEN
     val throwErrorCommandStep1: ThrowErrorCommandStep1 = mockk()
     val throwErrorCommandStep2: ThrowErrorCommandStep2 = mockk()
-    val zeebeFuture: ZeebeFuture<Void> = mockk(relaxed = true)
+    val zeebeFuture: CamundaFuture<ThrowErrorResponse> = mockk(relaxed = true)
 
-    every { zeebeClient.newThrowErrorCommand(TASK_ID.toLong()) } returns throwErrorCommandStep1
+    every { camundaClient.newThrowErrorCommand(TASK_ID.toLong()) } returns throwErrorCommandStep1
     every { throwErrorCommandStep1.errorCode(any()) } returns throwErrorCommandStep2
     every { throwErrorCommandStep2.errorMessage(any()) } returns throwErrorCommandStep2
     every { throwErrorCommandStep2.variables(PAYLOAD) } returns throwErrorCommandStep2

@@ -25,8 +25,8 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>spring-boot-starter-camunda-sdk</artifactId>
-      <version>${spring-boot-starter-camunda-sdk.version}</version>
+      <artifactId>camunda-spring-boot-starter</artifactId>
+      <version>${camunda-spring-boot-starter.version}</version>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
@@ -35,7 +35,7 @@
       <exclusions>
         <exclusion>
           <groupId>io.camunda</groupId>
-          <artifactId>zeebe-client-java</artifactId>
+          <artifactId>camunda-client-java</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -43,7 +43,7 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-process-test-extension-testcontainer</artifactId>
-      <version>8.7.13</version>
+      <version>8.8.3</version>
       <scope>test</scope>
     </dependency>
 

@@ -8,13 +8,13 @@ import dev.bpmcrafters.processengineapi.impl.task.filterBySubscription
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskSubscription
 import dev.bpmcrafters.processengineapi.task.TaskType
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.command.ActivateJobsCommandStep1.ActivateJobsCommandStep3
-import io.camunda.zeebe.client.api.command.ClientStatusException
-import io.camunda.zeebe.client.api.command.StreamJobsCommandStep1.StreamJobsCommandStep3
-import io.camunda.zeebe.client.api.response.ActivatedJob
-import io.camunda.zeebe.client.api.worker.JobWorker
-import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.command.ActivateJobsCommandStep1.ActivateJobsCommandStep3
+import io.camunda.client.api.command.ClientStatusException
+import io.camunda.client.api.command.StreamJobsCommandStep1.StreamJobsCommandStep3
+import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.worker.JobWorker
+import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.camunda.zeebe.protocol.Protocol
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.Status
@@ -22,10 +22,10 @@ import io.grpc.Status
 private val logger = KotlinLogging.logger {}
 
 class SubscribingRefreshingUserTaskDelivery(
-    private val zeebeClient: ZeebeClient,
-    private val subscriptionRepository: SubscriptionRepository,
-    private val workerId: String,
-    private val userTaskLockTimeoutMs: Long,
+  private val camundaClient: CamundaClient,
+  private val subscriptionRepository: SubscriptionRepository,
+  private val workerId: String,
+  private val userTaskLockTimeoutMs: Long,
 ) : SubscribingUserTaskDelivery, RefreshableDelivery {
 
   private var jobWorkerRegistry: Map<String, JobWorker> = emptyMap()
@@ -38,10 +38,10 @@ class SubscribingRefreshingUserTaskDelivery(
         .filter { it.taskType == TaskType.USER }
         .forEach { activeSubscription ->
           // this is a job to subscribe to.
-          val subscribedJobWorker = zeebeClient
+          val subscribedJobWorker = camundaClient
             .newWorker()
             .jobType(Protocol.USER_TASK_JOB_TYPE)
-            .handler { _, job -> consumeActivatedJob(activeSubscription, job, zeebeClient) }
+            .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient) }
             .maxJobsActive(Integer.MAX_VALUE)
             .name(workerId)
             .timeout(userTaskLockTimeoutMs)
@@ -58,7 +58,7 @@ class SubscribingRefreshingUserTaskDelivery(
     }
   }
 
-  private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, zeebeClient: ZeebeClient) {
+  private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, zeebeClient: CamundaClient) {
     if (activeSubscription.matches(job)) {
       subscriptionRepository.activateSubscriptionForTask("${job.key}", activeSubscription)
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
@@ -94,7 +94,7 @@ class SubscribingRefreshingUserTaskDelivery(
       subscriptions.forEach { taskId ->
         try {
           logger.trace { "PROCESS-ENGINE-C8-048: Extending job timout for user task $taskId..." }
-          zeebeClient
+          camundaClient
             .newUpdateTimeoutCommand(taskId.toLong())
             .timeout(userTaskLockTimeoutMs)
             .send()

@@ -4,7 +4,7 @@ import com.tngtech.jgiven.junit5.DualScenarioTest;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst.Elements;
 import dev.bpmcrafters.processengineapi.CommonRestrictions;
-import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.client.CamundaClient;
 import io.camunda.zeebe.process.test.api.ZeebeTestEngine;
 import io.camunda.zeebe.process.test.extension.testcontainer.ZeebeProcessTest;
 import org.camunda.community.process_test_coverage.junit5.platform8.ProcessEngineCoverageExtension;
@@ -17,7 +17,7 @@ public class SimpleProcessTest extends DualScenarioTest<SimpleProcessStages.Acti
 
   @RegisterExtension
   static ProcessEngineCoverageExtension coverageExtension = ProcessEngineCoverageExtension.builder().build();
-  private ZeebeClient client;
+  private CamundaClient client;
   private ZeebeTestEngine engine;
 
   @BeforeEach

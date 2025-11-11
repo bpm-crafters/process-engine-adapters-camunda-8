@@ -4,29 +4,26 @@ import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
 import dev.bpmcrafters.processengineapi.process.*
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.command.CreateProcessInstanceCommandStep1
-import io.camunda.zeebe.client.api.command.CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3
-import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1
-import io.camunda.zeebe.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
-import io.camunda.zeebe.client.api.response.ProcessInstanceEvent
-import io.camunda.zeebe.client.api.response.PublishMessageResponse
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.command.CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3
+import io.camunda.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
+import io.camunda.client.api.response.ProcessInstanceEvent
+import io.camunda.client.api.response.PublishMessageResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private val logger = KotlinLogging.logger {}
 
 class StartProcessApiImpl(
-  private val zeebeClient: ZeebeClient
+  private val camundaClient: CamundaClient
 ) : StartProcessApi {
 
-  override fun startProcess(cmd: StartProcessCommand): Future<ProcessInformation> {
+  override fun startProcess(cmd: StartProcessCommand): CompletableFuture<ProcessInformation> {
     return when (cmd) {
       is StartProcessByDefinitionCmd ->
         CompletableFuture.supplyAsync {
           logger.debug { "PROCESS-ENGINE-C8-004: Starting a new process instance by definition ${cmd.definitionKey}." }
-          zeebeClient
+          camundaClient
             .newCreateInstanceCommand()
             .bpmnProcessId(cmd.definitionKey)
             .latestVersion()
@@ -36,10 +33,11 @@ class StartProcessApiImpl(
             .get()
             .toProcessInformation()
         }
+
       is StartProcessByMessageCmd ->
         CompletableFuture.supplyAsync {
           logger.debug { "PROCESS-ENGINE-C8-005: Starting a new process instance by message ${cmd.messageName}." }
-          zeebeClient
+          camundaClient
             .newPublishMessageCommand()
             .messageName(cmd.messageName)
             .correlationKey("") // empty means create a new instance
@@ -49,6 +47,7 @@ class StartProcessApiImpl(
             .get()
             .toProcessInformation()
         }
+
       else -> throw IllegalArgumentException("Unsupported start command $cmd")
     }
   }
@@ -57,7 +56,7 @@ class StartProcessApiImpl(
     TODO("Not yet implemented")
   }
 
-  override fun getSupportedRestrictions(): Set<String>  = setOf(
+  override fun getSupportedRestrictions(): Set<String> = setOf(
     CommonRestrictions.TENANT_ID
   )
 
@@ -65,7 +64,9 @@ class StartProcessApiImpl(
     restrictions
       .forEach { (key, value) ->
         when (key) {
-          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) {
+            this.tenantId(value)
+          }
         }
       }
   }
@@ -74,7 +75,9 @@ class StartProcessApiImpl(
     restrictions
       .forEach { (key, value) ->
         when (key) {
-          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) { this.tenantId(value) }
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) {
+            this.tenantId(value)
+          }
         }
       }
   }

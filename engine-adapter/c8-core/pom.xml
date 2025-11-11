@@ -25,7 +25,7 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>zeebe-client-java</artifactId>
+      <artifactId>camunda-client-java</artifactId>
       <version>${zeebe-client-java.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -37,7 +37,7 @@
       <exclusions>
         <exclusion>
           <groupId>io.camunda</groupId>
-          <artifactId>zeebe-client-java</artifactId>
+          <artifactId>camunda-client-java</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

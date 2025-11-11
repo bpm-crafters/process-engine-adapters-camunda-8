@@ -9,7 +9,6 @@ import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
 import io.camunda.tasklist.CamundaTaskListClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private val logger = KotlinLogging.logger {}
 
@@ -18,7 +17,7 @@ class C8TaskListClientUserTaskCompletionApiImpl(
   private val subscriptionRepository: SubscriptionRepository
 ) : UserTaskCompletionApi {
 
-  override fun completeTask(cmd: CompleteTaskCmd): Future<Empty> {
+  override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
     logger.debug { "PROCESS-ENGINE-C8-006: completing service task ${cmd.taskId}." }
     taskListClient.completeTask(cmd.taskId, cmd.get())
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
@@ -28,7 +27,7 @@ class C8TaskListClientUserTaskCompletionApiImpl(
     return CompletableFuture.completedFuture(Empty)
   }
 
-  override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): Future<Empty> {
+  override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): CompletableFuture<Empty> {
     TODO("Not supported by task list client")
   }
 }

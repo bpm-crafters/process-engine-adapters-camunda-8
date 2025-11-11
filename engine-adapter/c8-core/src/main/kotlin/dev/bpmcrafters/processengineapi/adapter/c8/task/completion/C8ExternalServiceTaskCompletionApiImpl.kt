@@ -3,23 +3,22 @@ package dev.bpmcrafters.processengineapi.adapter.c8.task.completion
 import dev.bpmcrafters.processengineapi.Empty
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.*
-import io.camunda.zeebe.client.ZeebeClient
+import io.camunda.client.CamundaClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private val logger = KotlinLogging.logger {}
 
-class C8ZeebeExternalServiceTaskCompletionApiImpl(
-    private val zeebeClient: ZeebeClient,
-    private val subscriptionRepository: SubscriptionRepository,
-    private val failureRetrySupplier: FailureRetrySupplier
+class C8ExternalServiceTaskCompletionApiImpl(
+  private val camundaClient: CamundaClient,
+  private val subscriptionRepository: SubscriptionRepository,
+  private val failureRetrySupplier: FailureRetrySupplier
 ) : ServiceTaskCompletionApi {
 
-  override fun completeTask(cmd: CompleteTaskCmd): Future<Empty> {
+  override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
     logger.debug { "PROCESS-ENGINE-C8-008: completing service task ${cmd.taskId}." }
-    zeebeClient
+    camundaClient
       .newCompleteCommand(cmd.taskId.toLong())
       .variables(cmd.get())
       .send()
@@ -31,9 +30,9 @@ class C8ZeebeExternalServiceTaskCompletionApiImpl(
     return CompletableFuture.completedFuture(Empty)
   }
 
-  override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): Future<Empty> {
+  override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): CompletableFuture<Empty> {
     logger.debug { "PROCESS-ENGINE-C8-008: throwing error ${cmd.errorCode} in service task ${cmd.taskId}." }
-    zeebeClient
+    camundaClient
       .newThrowErrorCommand(cmd.taskId.toLong())
       .errorCode(cmd.errorCode)
       .errorMessage(cmd.errorMessage ?: "Unknown error")
@@ -47,9 +46,9 @@ class C8ZeebeExternalServiceTaskCompletionApiImpl(
     return CompletableFuture.completedFuture(Empty)
   }
 
-  override fun failTask(cmd: FailTaskCmd): Future<Empty> {
+  override fun failTask(cmd: FailTaskCmd): CompletableFuture<Empty> {
     val (retries, retriesTimeout) = failureRetrySupplier.apply(cmd.taskId)
-    zeebeClient
+    camundaClient
       .newFailCommand(cmd.taskId.toLong())
       .retries(retries)
       .retryBackoff(Duration.ofSeconds(retriesTimeout))

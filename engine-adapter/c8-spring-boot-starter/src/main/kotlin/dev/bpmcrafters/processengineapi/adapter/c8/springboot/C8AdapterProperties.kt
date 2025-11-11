@@ -80,7 +80,7 @@ class C8AdapterProperties(
     TASKLIST,
 
     /**
-     * Use zeebe client.
+     * Use camunda client.
      */
     JOB
   }
@@ -110,7 +110,7 @@ class C8AdapterProperties(
    */
   enum class ServiceTaskDeliveryStrategy {
     /**
-     * Subscribing using zeebe job.
+     * Subscribing using camunda job.
      */
     SUBSCRIPTION,
 

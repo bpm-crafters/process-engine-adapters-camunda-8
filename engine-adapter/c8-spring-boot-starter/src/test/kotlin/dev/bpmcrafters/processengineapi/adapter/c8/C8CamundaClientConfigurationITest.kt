@@ -19,14 +19,14 @@ import org.springframework.test.context.TestPropertySource
  * the job workers created by the adapter should respect this configuration.
  */
 @SpringBootTest
-@Import(C8ZeebeClientConfigurationTest.TestConfiguration::class)
+@Import(C8CamundaClientConfigurationITest.TestConfiguration::class)
 @ActiveProfiles("itest")
 @TestPropertySource(
   properties = [
-    "camunda.client.zeebe.defaults.stream-enabled=true"
+    "camunda.client.worker.defaults.stream-enabled=true"
   ]
 )
-class C8ZeebeClientConfigurationTest {
+class C8CamundaClientConfigurationITest {
 
   class TestConfiguration {
 
@@ -68,7 +68,7 @@ class C8ZeebeClientConfigurationTest {
   private lateinit var commandsSentToServer: ArrayList<String>
 
   @Test
-  fun `autoconfigured job workers should obey Zeebe client's configuration and use job streaming if enabled`() {
+  fun `autoconfigured job workers should obey Camunda client's configuration and use job streaming if enabled`() {
     // Given the configuration camunda.client.defaults.stream-enabled=true
     // And a subscription for an external task exists
     // Then autoconfiguration would create and start job workers with job streaming request sent to the server
