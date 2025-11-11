@@ -35,7 +35,6 @@ class SubscribingServiceTaskDelivery(
             .jobType(activeSubscription.taskDescriptionKey)
             .handler { _, job -> consumeActivatedJob(activeSubscription, job, zeebeClient) }
             .name(workerId)
-            .streamEnabled(false)
             .forSubscription(activeSubscription)
             // FIXME -> metrics to setup
             .open()
