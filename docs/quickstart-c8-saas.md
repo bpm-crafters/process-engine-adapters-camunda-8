@@ -16,17 +16,17 @@ First add the corresponding adapter to your project's classpath:
     <!-- We need the camunda client too -->
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>spring-boot-starter-camunda-sdk</artifactId>
-      <version>8.6.12</version>
+      <artifactId>camunda-spring-boot-starter</artifactId>
+      <version>8.8.3</version>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-tasklist-client-java</artifactId>
-      <version>8.6.12</version>
+      <version>8.8.1</version>
       <exclusions>
         <exclusion>
           <groupId>io.camunda</groupId>
-          <artifactId>zeebe-client-java</artifactId>
+          <artifactId>camunda-client-java</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
