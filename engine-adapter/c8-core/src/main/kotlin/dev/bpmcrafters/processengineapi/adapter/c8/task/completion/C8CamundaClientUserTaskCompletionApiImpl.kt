@@ -6,21 +6,20 @@ import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
 import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
-import io.camunda.zeebe.client.ZeebeClient
+import io.camunda.client.CamundaClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 private val logger = KotlinLogging.logger {}
 
-class C8ZeebeUserTaskCompletionApiImpl(
-  private val zeebeClient: ZeebeClient,
+class C8CamundaClientUserTaskCompletionApiImpl(
+  private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository
 ) : UserTaskCompletionApi {
 
-  override fun completeTask(cmd: CompleteTaskCmd): Future<Empty> {
+  override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
     logger.debug { "PROCESS-ENGINE-C8-012: completing user task ${cmd.taskId}." }
-    zeebeClient
+    camundaClient
       .newCompleteCommand(cmd.taskId.toLong())
       .variables(cmd.get())
       .send()
@@ -32,8 +31,8 @@ class C8ZeebeUserTaskCompletionApiImpl(
     return CompletableFuture.completedFuture(Empty)
   }
 
-  override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): Future<Empty> {
-    zeebeClient
+  override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): CompletableFuture<Empty> {
+    camundaClient
       .newThrowErrorCommand(cmd.taskId.toLong())
       .errorCode(cmd.errorCode)
       .variables(cmd.get())

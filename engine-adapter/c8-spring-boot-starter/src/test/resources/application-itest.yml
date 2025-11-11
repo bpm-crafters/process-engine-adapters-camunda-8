@@ -4,9 +4,12 @@ spring:
 
 camunda:
   client:
+    auth:
+      method: none
     mode: self-managed
-    identity:
-      enabled: false
+    worker:
+      defaults:
+        enabled: true
 
 dev:
   bpm-crafters:

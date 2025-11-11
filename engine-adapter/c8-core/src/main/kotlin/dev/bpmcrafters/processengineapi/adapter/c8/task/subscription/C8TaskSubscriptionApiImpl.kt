@@ -8,11 +8,10 @@ import dev.bpmcrafters.processengineapi.impl.task.AbstractTaskSubscriptionApiImp
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.UnsubscribeFromTaskCmd
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 class C8TaskSubscriptionApiImpl(
-    subscriptionRepository: SubscriptionRepository,
-    private val subscribingUserTaskDelivery: SubscribingUserTaskDelivery?
+  subscriptionRepository: SubscriptionRepository,
+  private val subscribingUserTaskDelivery: SubscribingUserTaskDelivery?
 ) : AbstractTaskSubscriptionApiImpl(
   subscriptionRepository = subscriptionRepository
 ) {
@@ -21,7 +20,7 @@ class C8TaskSubscriptionApiImpl(
     TODO("Not yet implemented")
   }
 
-  override fun unsubscribe(cmd: UnsubscribeFromTaskCmd): Future<Empty> {
+  override fun unsubscribe(cmd: UnsubscribeFromTaskCmd): CompletableFuture<Empty> {
     super.unsubscribe(cmd)
     // For subscribing delivery, we also have to close the job
     subscribingUserTaskDelivery?.unsubscribe(cmd.subscription)

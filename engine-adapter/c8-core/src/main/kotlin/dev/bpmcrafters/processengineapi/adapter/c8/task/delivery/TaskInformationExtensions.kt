@@ -2,8 +2,8 @@ package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.task.TaskInformation
+import io.camunda.client.api.response.ActivatedJob
 import io.camunda.tasklist.dto.Task
-import io.camunda.zeebe.client.api.response.ActivatedJob
 import io.camunda.zeebe.protocol.Protocol
 
 fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
@@ -21,6 +21,7 @@ fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
     "candidateGroups" to this.customHeaders.getOrDefault(Protocol.USER_TASK_CANDIDATE_GROUPS_HEADER_NAME, null),
     "followUpDate" to this.customHeaders.getOrDefault(Protocol.USER_TASK_FOLLOW_UP_DATE_HEADER_NAME, null),
     "topicName" to this.type,
+    TaskInformation.RETRIES to this.retries.toString(),
   )
 )
 

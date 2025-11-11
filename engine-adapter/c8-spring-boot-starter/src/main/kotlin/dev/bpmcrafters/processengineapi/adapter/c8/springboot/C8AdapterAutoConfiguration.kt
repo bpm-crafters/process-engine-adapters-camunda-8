@@ -6,43 +6,39 @@ import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.SubscribingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
-import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
-import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
 import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
+import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
+import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.process.StartProcessApi
 import dev.bpmcrafters.processengineapi.task.TaskSubscriptionApi
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.spring.client.configuration.CamundaAutoConfiguration
+import io.camunda.client.CamundaClient
+import io.camunda.client.spring.configuration.CamundaAutoConfiguration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.autoconfigure.AutoConfigureAfter
+import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
-import org.springframework.context.annotation.Configuration
 
-@Configuration
-@AutoConfigureAfter(
-  CamundaAutoConfiguration::class
-)
+@AutoConfiguration(after = [CamundaAutoConfiguration::class])
 @EnableConfigurationProperties(value = [C8AdapterProperties::class])
 @Conditional(C8AdapterEnabledCondition::class)
 class C8AdapterAutoConfiguration {
 
   @Bean("c8-start-process-api")
   @Qualifier("c8-start-process-api")
-  fun startProcessApi(zeebeClient: ZeebeClient): StartProcessApi = StartProcessApiImpl(
-    zeebeClient = zeebeClient
+  fun startProcessApi(camundaClient: CamundaClient): StartProcessApi = StartProcessApiImpl(
+    camundaClient = camundaClient
   )
 
   @Bean("c8-task-completion-api")
   @Qualifier("c8-task-completion-api")
   fun taskCompletionApi(
-      subscriptionRepository: SubscriptionRepository,
-      @Autowired(required = false) subscribingUserTaskDelivery: SubscribingUserTaskDelivery?
+    subscriptionRepository: SubscriptionRepository,
+    @Autowired(required = false) subscribingUserTaskDelivery: SubscribingUserTaskDelivery?
   ): TaskSubscriptionApi = C8TaskSubscriptionApiImpl(
     subscriptionRepository = subscriptionRepository,
     subscribingUserTaskDelivery = subscribingUserTaskDelivery,
@@ -50,20 +46,20 @@ class C8AdapterAutoConfiguration {
 
   @Bean("c8-correlation-api")
   @Qualifier("c8-correlation-api")
-  fun correlationApi(zeebeClient: ZeebeClient): CorrelationApi = CorrelationApiImpl(
-    zeebeClient = zeebeClient
+  fun correlationApi(camundaClient: CamundaClient): CorrelationApi = CorrelationApiImpl(
+    camundaClient = camundaClient
   )
 
   @Bean("c8-signal-api")
   @Qualifier("c8-signal-api")
-  fun signalApi(zeebeClient: ZeebeClient): SignalApi = SignalApiImpl(
-    zeebeClient = zeebeClient
+  fun signalApi(camundaClient: CamundaClient): SignalApi = SignalApiImpl(
+    camundaClient = camundaClient
   )
 
   @Bean("c8-deploy-api")
   @Qualifier("c8-deploy-api")
-  fun deploymentApi(zeebeClient: ZeebeClient): DeploymentApi = DeploymentApiImpl(
-    zeebeClient = zeebeClient
+  fun deploymentApi(camundaClient: CamundaClient): DeploymentApi = DeploymentApiImpl(
+    camundaClient = camundaClient
   )
 
   @Bean

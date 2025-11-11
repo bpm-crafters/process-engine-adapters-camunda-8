@@ -10,35 +10,29 @@ import dev.bpmcrafters.processengineapi.adapter.c8.correlation.CorrelationApiImp
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ZeebeExternalServiceTaskCompletionApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ZeebeUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
-import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
-import dev.bpmcrafters.processengineapi.task.support.UserTaskSupport
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
 import dev.bpmcrafters.processengineapi.deploy.DeployBundleCommand
 import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
 import dev.bpmcrafters.processengineapi.deploy.NamedResource.Companion.fromClasspath
+import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.process.StartProcessApi
 import dev.bpmcrafters.processengineapi.task.*
-import io.camunda.zeebe.client.ZeebeClient
-import io.camunda.zeebe.client.api.response.ActivatedJob
-import io.camunda.zeebe.process.test.api.ZeebeTestEngine
-import io.camunda.zeebe.process.test.filters.RecordStream
-import io.camunda.zeebe.protocol.record.Record
-import io.camunda.zeebe.protocol.record.RecordType
-import io.camunda.zeebe.protocol.record.intent.ProcessInstanceIntent
-import io.camunda.zeebe.protocol.record.value.BpmnElementType
-import io.camunda.zeebe.protocol.record.value.ProcessInstanceRecordValue
+import dev.bpmcrafters.processengineapi.task.support.UserTaskSupport
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.search.response.ProcessInstance
+import io.camunda.process.test.api.CamundaAssert
+import io.camunda.process.test.api.CamundaProcessTestContext
+import io.camunda.process.test.api.assertions.ProcessInstanceSelectors
 import org.assertj.core.api.Assertions
 import org.awaitility.Awaitility
-import java.time.Duration
 import java.util.*
-import java.util.stream.Stream
-import java.util.stream.StreamSupport
 
 /**
  * Abstract stage for subtyping of JGiven stages used in process tests for Camunda 8 Engine.
@@ -47,10 +41,9 @@ import java.util.stream.StreamSupport
 abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>> : Stage<SUBTYPE>() {
 
   @ProvidedScenarioState
-  protected lateinit var client: ZeebeClient
+  protected lateinit var client: CamundaClient
 
-  @ProvidedScenarioState
-  protected lateinit var engine: ZeebeTestEngine
+  protected lateinit var processTestContext: CamundaProcessTestContext
 
   @ProvidedScenarioState(resolution = ScenarioState.Resolution.NAME)
   protected lateinit var workerId: String
@@ -97,20 +90,20 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
    * @param restrictions list of restrictions used in task subscription API. Usually, contains a restriction to the process definition key. Please use `CommonRestrictions` builder.
    */
   open fun initializeEngine(
-    client: ZeebeClient,
-    engine: ZeebeTestEngine,
+    client: CamundaClient,
+    processTestContext: CamundaProcessTestContext,
     restrictions: Map<String, String>
   ): SUBTYPE {
     this.client = client
-    this.engine = engine
+    this.processTestContext = processTestContext
     this.workerId = self().javaClass.simpleName
 
     val subscriptionRepository = InMemSubscriptionRepository()
 
     startProcessApi = StartProcessApiImpl(this.client)
     deploymentApi = DeploymentApiImpl(this.client)
-    userTaskCompletionApi = C8ZeebeUserTaskCompletionApiImpl(this.client, subscriptionRepository)
-    serviceTaskCompletionApi = C8ZeebeExternalServiceTaskCompletionApiImpl(
+    userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository)
+    serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
       this.client,
       subscriptionRepository,
       LinearMemoryFailureRetrySupplier(3, 3L)
@@ -219,8 +212,9 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
   }
 
   open fun process_has_passed(activityId: String?): SUBTYPE {
-    Assertions.assertThat(allCompletedProcessEngineEvents.map { record -> record.value.elementId })
-      .contains(activityId)
+    val processInstance = findProcessInstance()
+    CamundaAssert.assertThat(ProcessInstanceSelectors.byKey(processInstance.processInstanceKey))
+      .hasCompletedElement(activityId, 1)
     return self()
   }
 
@@ -236,11 +230,9 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
   }
 
   open fun process_is_finished(): SUBTYPE {
-    Assertions.assertThat(
-      allCompletedProcessEngineEvents
-        .filter { record -> record.value.bpmnElementType == BpmnElementType.PROCESS }
-        .findFirst()
-    ).isNotEmpty()
+    val processInstance = findProcessInstance()
+    CamundaAssert.assertThat(ProcessInstanceSelectors.byKey(processInstance.processInstanceKey))
+      .isCompleted()
     return self()
   }
 
@@ -256,22 +248,9 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
 
   @As("process waits in element $")
   open fun process_waits_in_element(@Quoted activityId: String): SUBTYPE {
-    Awaitility.await().untilAsserted {
-      val activeActivityIds = allProcessEngineEvents
-        .toList()
-        .groupBy { record -> record.key } // group to remove completed or terminated events
-        .asSequence()
-        .filterNot { entry ->
-          entry.value.any { it.intent == ProcessInstanceIntent.ELEMENT_COMPLETED || it.intent == ProcessInstanceIntent.ELEMENT_TERMINATED }
-        }.map { it.value }
-        .flatten()
-        .filter { it.intent == ProcessInstanceIntent.ELEMENT_ACTIVATED }
-        .map { it.value.elementId }
-        .toList()
-      Assertions.assertThat(activeActivityIds)
-        .describedAs("Process is not waiting in \"$activityId\"")
-        .contains(activityId)
-    }
+    val processInstance = findProcessInstance()
+    CamundaAssert.assertThat(ProcessInstanceSelectors.byKey(processInstance.processInstanceKey))
+      .hasActiveElement(activityId, 1)
     return self()
   }
 
@@ -287,8 +266,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
 
 
   open fun timer_passes(durationInSeconds: Long): SUBTYPE {
-    engine.waitForIdleState(Duration.ofSeconds(durationInSeconds))
-    Thread.sleep(durationInSeconds * 1000)
+    processTestContext.increaseTime(java.time.Duration.ofSeconds(durationInSeconds))
     subscribingRefreshingUserTaskDelivery.refresh()
     return self()
   }
@@ -300,31 +278,20 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
     )
   }
 
-  private val allProcessEngineEvents: Stream<Record<ProcessInstanceRecordValue>>
-    get() {
-      val recordStream =
-        RecordStream.of(
-          engine.recordStreamSource
-        )
-      return StreamSupport
-        .stream(
-          recordStream.processInstanceRecords().spliterator(),
-          false
-        )
-        .filter { record -> record.recordType == RecordType.EVENT }
-    }
-
-  private val allCompletedProcessEngineEvents: Stream<Record<ProcessInstanceRecordValue>>
-    get() {
-      return allProcessEngineEvents
-        .filter { record -> record.intent == ProcessInstanceIntent.ELEMENT_COMPLETED }
-    }
-
   private fun findTaskByActivityId(activityId: String): Optional<String> {
     return Optional.ofNullable(
       userTaskSupport.getAllTasks()
         .find { taskInformation -> taskInformation.meta[CommonRestrictions.ACTIVITY_ID] == activityId }?.taskId
     )
+  }
+
+  private fun findProcessInstance(): ProcessInstance {
+    Awaitility.await().until {
+      client.newProcessInstanceSearchRequest()
+        .send().join().singleItem() != null
+    }
+    return client.newProcessInstanceSearchRequest()
+      .send().join().singleItem()
   }
 
 }
