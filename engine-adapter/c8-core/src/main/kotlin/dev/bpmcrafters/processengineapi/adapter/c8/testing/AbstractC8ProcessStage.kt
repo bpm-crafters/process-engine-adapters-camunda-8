@@ -32,6 +32,7 @@ import io.camunda.process.test.api.CamundaProcessTestContext
 import io.camunda.process.test.api.assertions.ProcessInstanceSelectors
 import org.assertj.core.api.Assertions
 import org.awaitility.Awaitility
+import java.time.Duration
 import java.util.*
 
 /**
@@ -85,8 +86,8 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
   /**
    * Initializes the engine. should be called from a method of your test marked with `@BeforeEach`
    * to make sure, the engine is initialized early.
-   * @param client zeebe client.
-   * @param engine zeebe test engine.
+   * @param client camunda client.
+   * @param processTestContext context of the process test
    * @param restrictions list of restrictions used in task subscription API. Usually, contains a restriction to the process definition key. Please use `CommonRestrictions` builder.
    */
   open fun initializeEngine(
@@ -211,6 +212,23 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
     return self()
   }
 
+  @As("external task of type \$jobType has failed with reason \$reason")
+  open fun external_task_is_failed(@Quoted jobType: String, reason: String, retryCount: Int): SUBTYPE {
+    Objects.requireNonNull(
+      this.activatedJob,
+      "No active external service task found, consider to assert using external_task_exists"
+    )
+    Assertions.assertThat(activatedJob.type)
+      .describedAs("Expected the active job to be a type of %s, but it was %s", jobType, activatedJob.type)
+      .isEqualTo(jobType)
+    serviceTaskCompletionApi
+      .failTask(
+        FailTaskCmd("" + activatedJob.key, reason, null,
+          retryCount, Duration.ofSeconds(3))
+      ).get()
+    return self()
+  }
+
   open fun process_has_passed(activityId: String?): SUBTYPE {
     val processInstance = findProcessInstance()
     CamundaAssert.assertThat(ProcessInstanceSelectors.byKey(processInstance.processInstanceKey))
@@ -233,6 +251,13 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
     val processInstance = findProcessInstance()
     CamundaAssert.assertThat(ProcessInstanceSelectors.byKey(processInstance.processInstanceKey))
       .isCompleted()
+    return self()
+  }
+
+  open fun process_has_incidents(): SUBTYPE {
+    val processInstance = findProcessInstance()
+    CamundaAssert.assertThat(ProcessInstanceSelectors.byKey(processInstance.processInstanceKey))
+      .hasActiveIncidents()
     return self()
   }
 
