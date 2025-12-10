@@ -20,8 +20,8 @@
   <properties>
     <!-- COMMON GLOBAL -->
     <spring-boot.version>3.5.7</spring-boot.version>
-    <process-engine-api.version>1.4</process-engine-api.version>
-
+    <process-engine-api.version>1.5-SNAPSHOT</process-engine-api.version>
+    <jackson-module-kotlin.version>2.9.8</jackson-module-kotlin.version>
     <!-- C8 -->
     <camunda-client-java.version>8.8.6</camunda-client-java.version>
     <camunda-spring-boot-starter.version>8.8.5</camunda-spring-boot-starter.version>

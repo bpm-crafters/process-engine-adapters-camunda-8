@@ -38,7 +38,7 @@ class C8CamundaClientUserTaskCompletionApiImpl(
       .variables(cmd.get())
       .send()
       .join()
-    logger.debug { "PROCESS-ENGINE-C8-013: throwing error ${cmd.errorCode} in user task ${cmd.taskId}." }
+    logger.debug { "PROCESS-ENGINE-C8-014: throwing error ${cmd.errorCode} in user task ${cmd.taskId}." }
     subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
       logger.debug { "PROCESS-ENGINE-C8-013: successfully thrown error ${cmd.errorCode} in user task ${cmd.taskId}." }
       termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))

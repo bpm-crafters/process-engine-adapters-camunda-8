@@ -22,11 +22,10 @@ public class JavaCamunda8ExampleApplication {
 
   @Bean
   @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = "user-tasks.completion-strategy", havingValue = "tasklist")
-  @SneakyThrows
   public CamundaTaskListClient myCamundaTaskListClient(
     CamundaClientProperties clientProperties,
     C8AdapterProperties c8AdapterProperties
-  ) {
+  ) throws Exception {
 
     var builder = CamundaTaskListClient.builder()
       .taskListUrl(c8AdapterProperties.getUserTasks().getTasklistUrl())
