@@ -1,14 +1,11 @@
 package dev.bpmcrafters.processengineapi.adapter.c8
 
-import dev.bpmcrafters.processengineapi.test.ProcessTestHelper
 import io.toolisticon.testing.jgiven.AND
 import io.toolisticon.testing.jgiven.GIVEN
 import io.toolisticon.testing.jgiven.THEN
 import io.toolisticon.testing.jgiven.WHEN
-import org.junit.Ignore
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
 
 class C8TaskApiITest : AbstractC8ApiITest() {
 

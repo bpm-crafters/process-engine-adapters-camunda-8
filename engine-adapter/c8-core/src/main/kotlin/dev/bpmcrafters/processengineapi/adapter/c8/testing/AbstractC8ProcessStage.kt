@@ -86,7 +86,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
    * Initializes the engine. should be called from a method of your test marked with `@BeforeEach`
    * to make sure, the engine is initialized early.
    * @param client zeebe client.
-   * @param engine zeebe test engine.
+   * @param processTestContext process test context.
    * @param restrictions list of restrictions used in task subscription API. Usually, contains a restriction to the process definition key. Please use `CommonRestrictions` builder.
    */
   open fun initializeEngine(
