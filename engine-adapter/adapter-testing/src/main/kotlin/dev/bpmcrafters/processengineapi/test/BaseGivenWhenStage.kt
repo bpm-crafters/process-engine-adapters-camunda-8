@@ -3,6 +3,7 @@ package dev.bpmcrafters.processengineapi.test
 import com.tngtech.jgiven.Stage
 import com.tngtech.jgiven.annotation.ExpectedScenarioState
 import com.tngtech.jgiven.annotation.ProvidedScenarioState
+import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionAtElementCmd
 import dev.bpmcrafters.processengineapi.decision.DecisionByRefEvaluationCommand
 import dev.bpmcrafters.processengineapi.decision.DecisionEvaluationResult
 import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionCmd
@@ -53,6 +54,16 @@ class BaseGivenWhenStage : Stage<BaseGivenWhenStage>() {
       StartProcessByDefinitionCmd(
         definitionKey = definitionKey,
         payloadSupplier = { mapOf(singlePayload) }
+      )
+    ).get().instanceId
+  }
+
+  fun `start process by definition at element`(definitionKey: String, elementId: String) = step() {
+    instanceId = processTestHelper.getStartProcessApi().startProcess(
+      StartProcessByDefinitionAtElementCmd(
+        definitionKey = definitionKey,
+        elementId = elementId,
+        payloadSupplier = { emptyMap() }
       )
     ).get().instanceId
   }
