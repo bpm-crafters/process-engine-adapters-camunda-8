@@ -51,7 +51,7 @@ class PullUserTaskDelivery(
             )
 
             deliveredTaskIds.remove(task.id)
-            val variablesFromTask: Map<String, Any> = task.variables?.associate { variable ->
+            val variablesFromTask: Map<String, Any?> = task.variables?.associate { variable ->
               variable.name to variable.value
             } ?: mapOf()
 
