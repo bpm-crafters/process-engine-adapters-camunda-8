@@ -3,6 +3,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
@@ -37,6 +38,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
     const val KEY = "simple-process"
     const val START_MESSAGE = "startMessage"
     const val BPMN = "bpmn/$KEY.bpmn"
+    const val DMN = "decision/main_decision.dmn"
 
     const val USER_TASK = "user-perform-task"
     const val EXTERNAL_TASK = "execute-action-external"
@@ -76,11 +78,13 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
       ),
       pullUserTaskDelivery = PullUserTaskDelivery(taskListClient = camundaTaskListClient, subscriptionRepository = subscriptionRepository),
       subscribingUserTaskDelivery = userTaskDelivery,
-      subscriptionRepository = subscriptionRepository
+      subscriptionRepository = subscriptionRepository,
+      evaluateDecisionApi = EvaluateDecisionApiImpl(this.client)
     )
 
     val event: DeploymentEvent = client.newDeployResourceCommand()
       .addResourceFromClasspath(BPMN)
+      .addResourceFromClasspath(DMN)
       .send()
       .join()
     assertThat(event).isNotNull

@@ -1,5 +1,6 @@
 package dev.bpmcrafters.processengineapi.adapter.c8
 
+import dev.bpmcrafters.processengineapi.decision.EvaluateDecisionApi
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
@@ -20,15 +21,18 @@ class C8ProcessTestHelper(
   private val taskSubscriptionApi: TaskSubscriptionApi,
   private val userTaskCompletionApi: UserTaskCompletionApi,
   private val serviceTaskCompletionApi: ServiceTaskCompletionApi,
-  private val subscriptionRepository: SubscriptionRepository
+  private val subscriptionRepository: SubscriptionRepository,
+  private val evaluateDecisionApi: EvaluateDecisionApi
 ) : ProcessTestHelper {
 
   override fun getStartProcessApi(): StartProcessApi = startProcessApi
   override fun getTaskSubscriptionApi(): TaskSubscriptionApi = taskSubscriptionApi
   override fun getUserTaskCompletionApi(): UserTaskCompletionApi = userTaskCompletionApi
   override fun getServiceTaskCompletionApi(): ServiceTaskCompletionApi = serviceTaskCompletionApi
+  override fun getEvaluateDecisionApi(): EvaluateDecisionApi = evaluateDecisionApi
 
   override fun triggerPullingUserTaskDeliveryManually() = pullUserTaskDelivery.refresh()
+
   override fun subscribeForUserTasks() = subscribingUserTaskDelivery.subscribe()
 
   override fun triggerExternalTaskDeliveryManually() = subscribingServiceTaskDelivery.subscribe()
@@ -37,7 +41,6 @@ class C8ProcessTestHelper(
     instanceId = "fixme",
     meta = emptyMap()
   )
-
   override fun clearAllSubscriptions() {
     (subscriptionRepository as InMemSubscriptionRepository).deleteAllTaskSubscriptions()
     subscribingUserTaskDelivery.unsubscribeAll()
