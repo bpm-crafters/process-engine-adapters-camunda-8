@@ -13,17 +13,24 @@ class EvaluateDecisionResultImpl(
     const val NULL_VALUE = "null"
   }
 
-  override fun asSingle(): DecisionEvaluationOutput = DecisionEvaluationOutputImpl(objectMapper, this.outputDecision?:NULL_VALUE)
+  override fun asSingle(): DecisionEvaluationOutput = DecisionEvaluationOutputImpl(objectMapper, this.outputDecision ?: NULL_VALUE)
 
   override fun asList(): List<DecisionEvaluationOutput> =
     try {
-     val rootNode = objectMapper.readTree(this.outputDecision?:NULL_VALUE)
-     if (!(rootNode.isArray || rootNode.isNull)){
-       throw IllegalStateException("No array found")
-     }
-       rootNode.map {DecisionEvaluationOutputImpl(objectMapper,
-         if (it.isTextual) {it.asText()} else {it.toString()}
-         )}.toList()
+      val rootNode = objectMapper.readTree(this.outputDecision ?: NULL_VALUE)
+      if (!(rootNode.isArray || rootNode.isNull)) {
+        throw IllegalStateException("No array found")
+      }
+      rootNode.map {
+        DecisionEvaluationOutputImpl(
+          objectMapper,
+          if (it.isTextual) {
+            it.asText()
+          } else {
+            it.toString()
+          }
+        )
+      }.toList()
     } catch (e: Exception) {
       throw IllegalStateException("The result cannot be interpreted as List", e)
     }

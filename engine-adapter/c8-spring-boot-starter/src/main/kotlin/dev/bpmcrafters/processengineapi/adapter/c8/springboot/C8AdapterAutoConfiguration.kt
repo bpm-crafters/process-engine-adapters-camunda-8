@@ -1,13 +1,16 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.CorrelationApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.SubscribingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
+import dev.bpmcrafters.processengineapi.decision.EvaluateDecisionApi
 import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
@@ -59,6 +62,13 @@ class C8AdapterAutoConfiguration {
   @Bean("c8-deploy-api")
   @Qualifier("c8-deploy-api")
   fun deploymentApi(camundaClient: CamundaClient): DeploymentApi = DeploymentApiImpl(
+    camundaClient = camundaClient
+  )
+
+  @ConditionalOnMissingBean
+  @Bean("c8-evaluate-decision-api")
+  @Qualifier("c8-evaluate-decision-api")
+  fun evaluateDecisionApi(camundaClient: CamundaClient): EvaluateDecisionApi = EvaluateDecisionApiImpl(
     camundaClient = camundaClient
   )
 

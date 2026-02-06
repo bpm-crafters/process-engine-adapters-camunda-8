@@ -5,8 +5,12 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
-import dev.bpmcrafters.processengineapi.decision.*
+import dev.bpmcrafters.processengineapi.decision.DecisionByRefEvaluationCommand
+import dev.bpmcrafters.processengineapi.decision.DecisionEvaluationCommand
+import dev.bpmcrafters.processengineapi.decision.DecisionEvaluationResult
+import dev.bpmcrafters.processengineapi.decision.EvaluateDecisionApi
 import io.camunda.client.CamundaClient
+import io.camunda.client.api.command.EvaluateDecisionCommandStep1
 import io.camunda.client.api.response.EvaluateDecisionResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
@@ -23,7 +27,6 @@ class EvaluateDecisionApiImpl(
     val objectMapper = jacksonObjectMapper()
   }
 
-
   override fun evaluateDecision(command: DecisionEvaluationCommand): CompletableFuture<DecisionEvaluationResult> =
     when (command) {
       is DecisionByRefEvaluationCommand -> {
@@ -32,6 +35,7 @@ class EvaluateDecisionApiImpl(
           camundaClient
             .newEvaluateDecisionCommand()
             .decisionId(command.decisionRef)
+            .applyRestrictions(ensureSupported(command.restrictionSupplier.get()))
             .variables(command.payloadSupplier.get())
             .send()
             .get()
@@ -48,7 +52,7 @@ class EvaluateDecisionApiImpl(
       objectMapper = objectMapper,
       metaInfo = this.toMetaInfo(),
       outputDecision = this.decisionOutput
-      )
+    )
 
 
   private fun EvaluateDecisionResponse.purgeFailed(): EvaluateDecisionResponse =
@@ -73,6 +77,17 @@ class EvaluateDecisionApiImpl(
       "failureMessage" to this.failureMessage,
       CommonRestrictions.TENANT_ID to this.tenantId,
     )
+
+  private fun EvaluateDecisionCommandStep1.EvaluateDecisionCommandStep2.applyRestrictions(restrictions: Map<String, String>) = this.apply {
+    restrictions
+      .forEach { (key, value) ->
+        when (key) {
+          CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) {
+            this.tenantId(value)
+          }
+        }
+      }
+  }
 
   override fun getSupportedRestrictions(): Set<String> = setOf(
     CommonRestrictions.TENANT_ID
