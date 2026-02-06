@@ -14,7 +14,7 @@ class DecisionEvaluationOutputImpl(
 
   override fun asMap(): Map<String, Any?>? =
     try {
-        objectMapper.readValue(rawOutput, MAP_TYPE_REFERENCE)
+      objectMapper.readValue(rawOutput, MAP_TYPE_REFERENCE)
     } catch (e: Exception) {
       throw IllegalStateException("Can't parse into Map a decision output: $rawOutput. Ensure that it is expected to be multi-value output", e)
     }
