@@ -176,7 +176,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
   @As("external task of type \$jobType is completed")
   open fun external_task_is_completed(
     @Quoted jobType: String,
-    payload: Map<String, Any> = mapOf()
+    payload: Map<String, Any?> = mapOf()
   ): SUBTYPE {
     Objects.requireNonNull(
       this.activatedJob,

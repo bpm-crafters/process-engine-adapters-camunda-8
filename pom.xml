@@ -19,8 +19,8 @@
 
   <properties>
     <!-- COMMON GLOBAL -->
-    <spring-boot.version>3.5.7</spring-boot.version>
-    <process-engine-api.version>1.4</process-engine-api.version>
+    <spring-boot.version>3.5.10</spring-boot.version>
+    <process-engine-api.version>1.5</process-engine-api.version>
 
     <!-- C8 -->
     <camunda-client-java.version>8.8.11</camunda-client-java.version>
