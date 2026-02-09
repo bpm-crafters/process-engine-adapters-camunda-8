@@ -44,9 +44,10 @@ class C8SchedulingAutoConfiguration {
   @Qualifier("c8-task-scheduler")
   @ConditionalOnMissingBean
   fun taskScheduler(): TaskScheduler {
-    val threadPoolTaskScheduler = ThreadPoolTaskScheduler()
-    threadPoolTaskScheduler.poolSize = 2 // we have two schedulers, one for user tasks one for service tasks
-    threadPoolTaskScheduler.threadNamePrefix = "C8REMOTE-SCHEDULER-"
+    val threadPoolTaskScheduler = ThreadPoolTaskScheduler().apply {
+      poolSize = 2 // we have two schedulers, one for user tasks one for service tasks
+      setThreadNamePrefix("C8REMOTE-SCHEDULER-")
+    }
     return threadPoolTaskScheduler
   }
 

@@ -26,7 +26,7 @@
       </dependency>
       <dependency>
         <groupId>io.camunda</groupId>
-        <artifactId>camunda-spring-boot-starter</artifactId>
+        <artifactId>camunda-spring-boot-4-starter</artifactId>
         <version>${camunda-spring-boot-starter.version}</version>
       </dependency>
       <dependency>
