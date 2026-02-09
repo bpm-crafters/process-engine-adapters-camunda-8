@@ -77,6 +77,11 @@
         <scope>import</scope>
       </dependency>
       <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>camunda-spring-boot-4-starter</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
         <groupId>dev.bpm-crafters.process-engine-api</groupId>
         <artifactId>process-engine-api</artifactId>
         <version>${process-engine-api.version}</version>
