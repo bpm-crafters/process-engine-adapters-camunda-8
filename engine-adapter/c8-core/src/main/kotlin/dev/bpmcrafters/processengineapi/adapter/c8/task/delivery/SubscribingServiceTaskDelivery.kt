@@ -96,11 +96,12 @@ class SubscribingServiceTaskDelivery(
     // FIXME -> more to setup from props
     return this.apply {
       val payloadDescription = subscription.payloadDescription
+      val tenantId = subscription.restrictions[CommonRestrictions.TENANT_ID]
+      val lockDuration = subscription.restrictions["workerLockDurationInMilliseconds"]
+      if (tenantId != null) this.tenantId(tenantId)
+      if (lockDuration != null) this.timeout(lockDuration.toLong())
       if (!payloadDescription.isNullOrEmpty()) {
         this.fetchVariables(payloadDescription.toList())
-      }
-      if (subscription.restrictions.containsKey(CommonRestrictions.TENANT_ID)) {
-        this.tenantId(subscription.restrictions[CommonRestrictions.TENANT_ID])
       }
     }
   }
