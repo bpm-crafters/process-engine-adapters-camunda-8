@@ -3,6 +3,8 @@ package dev.bpmcrafters.processengineapi.test
 import com.tngtech.jgiven.Stage
 import com.tngtech.jgiven.annotation.ExpectedScenarioState
 import com.tngtech.jgiven.annotation.ProvidedScenarioState
+import dev.bpmcrafters.processengineapi.CommonRestrictions
+import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionAtElementCmd
 import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionCmd
 import dev.bpmcrafters.processengineapi.process.StartProcessByMessageCmd
 import dev.bpmcrafters.processengineapi.task.*
@@ -63,6 +65,37 @@ class BaseGivenWhenStage : Stage<BaseGivenWhenStage>() {
       StartProcessByMessageCmd(
         messageName = messageName,
         payloadSupplier = { mapOf(singlePayload) }
+      )
+    ).get().instanceId
+  }
+
+  fun `start process at element`(definitionKey: String, elementId: String) = step {
+    instanceId = processTestHelper.getStartProcessApi().startProcess(
+      StartProcessByDefinitionAtElementCmd(
+        definitionKey = definitionKey,
+        elementId = elementId,
+        payloadSupplier = { emptyMap() }
+      )
+    ).get().instanceId
+  }
+
+  fun `start process at element with payload`(definitionKey: String, elementId: String, singlePayload: Pair<String, Any>) = step {
+    instanceId = processTestHelper.getStartProcessApi().startProcess(
+      StartProcessByDefinitionAtElementCmd(
+        definitionKey = definitionKey,
+        elementId = elementId,
+        payloadSupplier = { mapOf(singlePayload) }
+      )
+    ).get().instanceId
+  }
+
+  fun `start process at element with tenant`(definitionKey: String, elementId: String, tenantId: String) = step {
+    instanceId = processTestHelper.getStartProcessApi().startProcess(
+      StartProcessByDefinitionAtElementCmd(
+        definitionKey = definitionKey,
+        elementId = elementId,
+        payloadSupplier = { emptyMap() },
+        restrictions = mapOf(CommonRestrictions.TENANT_ID to tenantId)
       )
     ).get().instanceId
   }

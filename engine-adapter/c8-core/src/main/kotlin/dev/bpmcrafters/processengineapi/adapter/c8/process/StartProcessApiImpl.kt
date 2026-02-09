@@ -3,7 +3,12 @@ package dev.bpmcrafters.processengineapi.adapter.c8.process
 import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.MetaInfo
 import dev.bpmcrafters.processengineapi.MetaInfoAware
-import dev.bpmcrafters.processengineapi.process.*
+import dev.bpmcrafters.processengineapi.process.ProcessInformation
+import dev.bpmcrafters.processengineapi.process.StartProcessApi
+import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionAtElementCmd
+import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionCmd
+import dev.bpmcrafters.processengineapi.process.StartProcessByMessageCmd
+import dev.bpmcrafters.processengineapi.process.StartProcessCommand
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.command.CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3
 import io.camunda.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
@@ -43,6 +48,20 @@ class StartProcessApiImpl(
             .correlationKey("") // empty means create a new instance
             .variables(cmd.payloadSupplier.get())
             .applyRestrictions(ensureSupported(cmd.restrictions))
+            .send()
+            .get()
+            .toProcessInformation()
+        }
+
+      is StartProcessByDefinitionAtElementCmd ->
+        CompletableFuture.supplyAsync {
+          logger.debug { "PROCESS-ENGINE-C8-006: Starting a new process instance by definition ${cmd.definitionKey} at element ${cmd.elementId}." }
+          camundaClient.newCreateInstanceCommand()
+            .bpmnProcessId(cmd.definitionKey)
+            .latestVersion()
+            .variables(cmd.payloadSupplier.get())
+            .applyRestrictions(ensureSupported(cmd.restrictions))
+            .startBeforeElement(cmd.elementId)
             .send()
             .get()
             .toProcessInformation()
