@@ -48,7 +48,12 @@ class C8AdapterProperties(
     /**
      * Timeout in seconds before making a retry.
      */
-    val retryTimeoutInSeconds: Long = 5L
+    val retryTimeoutInSeconds: Long = 5L,
+
+    /**
+     * Time in seconds to lock a service task. Default is 5 minutes.
+     */
+    val lockTimeInSeconds: Long = 300L,
   )
 
   data class UserTasks(

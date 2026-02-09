@@ -49,7 +49,8 @@ class C8CamundaClientAutoConfiguration {
     subscriptionRepository = subscriptionRepository,
     camundaClient = camundaClient,
     workerId = c8AdapterProperties.serviceTasks.workerId,
-    retryTimeoutInSeconds = c8AdapterProperties.serviceTasks.retryTimeoutInSeconds
+    retryTimeoutInSeconds = c8AdapterProperties.serviceTasks.retryTimeoutInSeconds,
+    lockDurationInSeconds = c8AdapterProperties.serviceTasks.lockTimeInSeconds
   )
 
   @Bean(name = ["c8-user-task-delivery"])

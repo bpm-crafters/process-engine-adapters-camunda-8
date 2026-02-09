@@ -1,9 +1,9 @@
 package dev.bpmcrafters.processengineapi.adapter.c8
 
-import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
@@ -67,19 +67,23 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
 
       startProcessApi = StartProcessApiImpl(camundaClient = client),
       userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository),
-      serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
-        this.client,
-        subscriptionRepository,
-        LinearMemoryFailureRetrySupplier(3, 3L)
-      ),
       taskSubscriptionApi = C8TaskSubscriptionApiImpl(subscriptionRepository, userTaskDelivery),
-      subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
-        client, subscriptionRepository, workerId, 3L
-      ),
       pullUserTaskDelivery = PullUserTaskDelivery(taskListClient = camundaTaskListClient, subscriptionRepository = subscriptionRepository),
       subscribingUserTaskDelivery = userTaskDelivery,
       subscriptionRepository = subscriptionRepository,
-      evaluateDecisionApi = EvaluateDecisionApiImpl(this.client)
+      evaluateDecisionApi = EvaluateDecisionApiImpl(this.client),
+      serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
+        camundaClient = client,
+        subscriptionRepository = subscriptionRepository,
+        failureRetrySupplier = LinearMemoryFailureRetrySupplier(3, 3L)
+      ),
+      subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
+        camundaClient = client,
+        subscriptionRepository = subscriptionRepository,
+        workerId = workerId,
+        retryTimeoutInSeconds = 3L,
+        lockDurationInSeconds = 3L
+      ),
     )
 
     val event: DeploymentEvent = client.newDeployResourceCommand()

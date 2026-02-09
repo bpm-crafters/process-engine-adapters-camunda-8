@@ -21,7 +21,8 @@ class SubscribingServiceTaskDelivery(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
   private val workerId: String,
-  private val retryTimeoutInSeconds: Long
+  private val retryTimeoutInSeconds: Long,
+  private val lockDurationInSeconds: Long
 ) {
 
   fun subscribe() {
@@ -97,12 +98,16 @@ class SubscribingServiceTaskDelivery(
     return this.apply {
       val payloadDescription = subscription.payloadDescription
       val tenantId = subscription.restrictions[CommonRestrictions.TENANT_ID]
-      val lockDuration = subscription.restrictions["workerLockDurationInMilliseconds"]
+      this.timeout(getLockDuration(subscription))
       if (tenantId != null) this.tenantId(tenantId)
-      if (lockDuration != null) this.timeout(lockDuration.toLong())
       if (!payloadDescription.isNullOrEmpty()) {
         this.fetchVariables(payloadDescription.toList())
       }
     }
+  }
+
+  private fun getLockDuration(subscription: TaskSubscriptionHandle): Long {
+    val customLockDuration = subscription.restrictions["workerLockDurationInMilliseconds"]
+    return customLockDuration?.toLong() ?: (lockDurationInSeconds * 1000)
   }
 }
