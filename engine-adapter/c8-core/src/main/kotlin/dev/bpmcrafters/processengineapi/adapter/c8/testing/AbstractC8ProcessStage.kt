@@ -10,7 +10,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.correlation.CorrelationApiImp
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskNativeCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
@@ -23,7 +23,13 @@ import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
 import dev.bpmcrafters.processengineapi.deploy.NamedResource.Companion.fromClasspath
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.process.StartProcessApi
-import dev.bpmcrafters.processengineapi.task.*
+import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
+import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
+import dev.bpmcrafters.processengineapi.task.FailTaskCmd
+import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
+import dev.bpmcrafters.processengineapi.task.TaskInformation
+import dev.bpmcrafters.processengineapi.task.TaskSubscriptionApi
+import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
 import dev.bpmcrafters.processengineapi.task.support.UserTaskSupport
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
@@ -104,7 +110,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
 
     startProcessApi = StartProcessApiImpl(this.client)
     deploymentApi = DeploymentApiImpl(this.client)
-    userTaskCompletionApi = C8CamundaClientUserTaskNativeCompletionApiImpl(this.client, subscriptionRepository)
+    userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository)
     serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
       this.client,
       subscriptionRepository,

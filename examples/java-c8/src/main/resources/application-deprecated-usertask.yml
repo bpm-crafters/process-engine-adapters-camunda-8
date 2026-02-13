@@ -4,6 +4,6 @@ dev:
       adapter:
         c8:
           user-tasks:
+            type: job
             delivery-strategy: subscription_refreshing
-            completion-strategy: job
             schedule-delivery-fixed-rate-in-seconds: 5

@@ -1,9 +1,9 @@
 package dev.bpmcrafters.processengineapi.adapter.c8
 
-import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskNativeCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
@@ -57,7 +57,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
     this.processTestHelper = C8ProcessTestHelper(
 
       startProcessApi = StartProcessApiImpl(camundaClient = client),
-      userTaskCompletionApi = C8CamundaClientUserTaskNativeCompletionApiImpl(this.client, subscriptionRepository),
+      userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository),
       serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
         this.client,
         subscriptionRepository,
