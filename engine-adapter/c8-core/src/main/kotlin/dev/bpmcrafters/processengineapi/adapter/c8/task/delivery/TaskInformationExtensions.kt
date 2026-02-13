@@ -3,7 +3,8 @@ package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import io.camunda.client.api.response.ActivatedJob
-import io.camunda.tasklist.dto.Task
+import io.camunda.client.api.search.response.Form
+import io.camunda.client.api.search.response.UserTask
 import io.camunda.zeebe.protocol.Protocol
 
 fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
@@ -25,27 +26,25 @@ fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
   )
 )
 
-fun Task.toTaskInformation(): TaskInformation = TaskInformation(
-  taskId = this.id,
+fun UserTask.toTaskInformation(form: Form?): TaskInformation = TaskInformation(
+  taskId = this.userTaskKey.toString(),
   meta = mapOf(
-    CommonRestrictions.ACTIVITY_ID to this.taskDefinitionId,
-    CommonRestrictions.PROCESS_DEFINITION_KEY to this.processDefinitionKey,
-    CommonRestrictions.PROCESS_INSTANCE_ID to this.processInstanceKey,
+    CommonRestrictions.ACTIVITY_ID to this.elementId,
+    CommonRestrictions.PROCESS_DEFINITION_KEY to this.bpmnProcessId,
+    CommonRestrictions.PROCESS_DEFINITION_ID to this.processDefinitionKey.toString(),
+    CommonRestrictions.PROCESS_INSTANCE_ID to this.processInstanceKey.toString(),
     CommonRestrictions.TENANT_ID to this.tenantId,
     "assignee" to this.assignee,
     "candidateUsers" to (this.candidateUsers?.joinToString(",") ?: ""),
     "candidateGroups" to (this.candidateGroups?.joinToString(",") ?: ""),
-    "formKey" to this.formKey,
     "followUpDate" to (this.followUpDate?.toString() ?: ""),
     "dueDate" to (this.dueDate?.toString() ?: ""),
-
-    // currently only resolvable via task list
-    "creationDate" to this.creationDate,
+    "creationDate" to this.creationDate.toString(),
     "processName" to this.processName,
     "taskName" to this.name,
-    "formId" to this.formId,
-    "formVersion" to "${this.formVersion}",
-    "creationDate" to this.creationDate.toString(),
-    "taskState" to this.taskState.name,
+    "formId" to form?.formKey.toString(),
+    "formKey" to (form?.formId ?: ""),
+    "formVersion" to (form?.let { "${it.version}" } ?: ""),
+    "taskState" to this.state.name,
   )
 )

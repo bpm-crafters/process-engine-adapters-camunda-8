@@ -64,10 +64,6 @@ class C8AdapterProperties(
      * Fixed rate for scheduled user task delivery.
      */
     val scheduleDeliveryFixedRateInSeconds: Long = 5L,
-    /**
-     * URL of the task list.
-     */
-    val tasklistUrl: String = "https://\${zeebe.client.cloud.region}.tasklist.camunda.io/\${zeebe.client.cloud.clusterId}"
   )
 
   /**
@@ -75,12 +71,12 @@ class C8AdapterProperties(
    */
   enum class UserTaskCompletionStrategy {
     /**
-     * Use task list client.
+     * Native user tasks of Camunda.
      */
-    TASKLIST,
+    NATIVE,
 
     /**
-     * Use camunda client.
+     * Deprecated job worker implementation for user tasks.
      */
     JOB
   }

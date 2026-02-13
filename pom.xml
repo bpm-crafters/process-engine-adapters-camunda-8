@@ -25,7 +25,6 @@
 
     <!-- C8 -->
     <camunda.version>8.8.11</camunda.version>
-    <camunda-tasklist-client-java.version>8.8.3</camunda-tasklist-client-java.version>
 
     <!-- TEST -->
     <mockito.version>6.2.3</mockito.version>
@@ -35,6 +34,7 @@
     <awaitility.version>4.3.0</awaitility.version>
     <mockk.version>1.14.9</mockk.version>
     <slf4j.verion>2.0.17</slf4j.verion>
+    <testcontainers.version>2.0.3</testcontainers.version>
 
   </properties>
 
@@ -48,6 +48,13 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>io.toolisticon.spring</groupId>
         <artifactId>spring-boot-support-bom</artifactId>
@@ -68,11 +75,6 @@
         <version>${camunda.version}</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.camunda</groupId>
-        <artifactId>camunda-tasklist-client-java</artifactId>
-        <version>${camunda-tasklist-client-java.version}</version>
       </dependency>
       <dependency>
         <groupId>dev.bpm-crafters.process-engine-api</groupId>

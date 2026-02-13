@@ -12,24 +12,10 @@ import java.util.concurrent.CompletableFuture
 
 private val logger = KotlinLogging.logger {}
 
-class C8CamundaClientUserTaskCompletionApiImpl(
+sealed class C8CamundaClientUserTaskCompletionApiImpl(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository
 ) : UserTaskCompletionApi {
-
-  override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
-    logger.debug { "PROCESS-ENGINE-C8-012: completing user task ${cmd.taskId}." }
-    camundaClient
-      .newCompleteCommand(cmd.taskId.toLong())
-      .variables(cmd.get())
-      .send()
-      .join()
-    subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
-      logger.debug { "PROCESS-ENGINE-C8-013: successfully completed user task ${cmd.taskId}." }
-      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
-    }
-    return CompletableFuture.completedFuture(Empty)
-  }
 
   override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): CompletableFuture<Empty> {
     camundaClient
@@ -45,4 +31,46 @@ class C8CamundaClientUserTaskCompletionApiImpl(
     }
     return CompletableFuture.completedFuture(Empty)
   }
+}
+
+class C8CamundaClientUserTaskJobCompletionApiImpl(
+  private val camundaClient: CamundaClient,
+  private val subscriptionRepository: SubscriptionRepository
+) : C8CamundaClientUserTaskCompletionApiImpl(camundaClient, subscriptionRepository) {
+
+  override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
+    logger.debug { "PROCESS-ENGINE-C8-012: completing user task ${cmd.taskId}." }
+    camundaClient
+      .newCompleteCommand(cmd.taskId.toLong())
+      .variables(cmd.get())
+      .send()
+      .join()
+    subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
+      logger.debug { "PROCESS-ENGINE-C8-013: successfully completed user task ${cmd.taskId}." }
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
+    }
+    return CompletableFuture.completedFuture(Empty)
+  }
+
+}
+
+class C8CamundaClientUserTaskNativeCompletionApiImpl(
+  private val camundaClient: CamundaClient,
+  private val subscriptionRepository: SubscriptionRepository
+) : C8CamundaClientUserTaskCompletionApiImpl(camundaClient, subscriptionRepository) {
+
+  override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
+    logger.debug { "PROCESS-ENGINE-C8-012: completing user task ${cmd.taskId}." }
+    camundaClient
+      .newCompleteUserTaskCommand(cmd.taskId.toLong())
+      .variables(cmd.get())
+      .send()
+      .join()
+    subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
+      logger.debug { "PROCESS-ENGINE-C8-013: successfully completed user task ${cmd.taskId}." }
+      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
+    }
+    return CompletableFuture.completedFuture(Empty)
+  }
+
 }

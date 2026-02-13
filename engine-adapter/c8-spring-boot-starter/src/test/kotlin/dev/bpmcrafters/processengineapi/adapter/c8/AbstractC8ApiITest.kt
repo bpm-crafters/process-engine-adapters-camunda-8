@@ -2,8 +2,8 @@ package dev.bpmcrafters.processengineapi.adapter.c8
 
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
-import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskNativeCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
@@ -14,7 +14,6 @@ import dev.bpmcrafters.processengineapi.test.JGivenSpringBaseIntegrationTest
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.DeploymentEvent
 import io.camunda.process.test.api.CamundaProcessTest
-import io.camunda.tasklist.CamundaTaskListClient
 import io.toolisticon.testing.jgiven.GIVEN
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -22,8 +21,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
-
 
 @SpringBootTest(
   classes = [C8TestApplication::class],
@@ -46,12 +43,6 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
 
   lateinit var client: CamundaClient
 
-  /*
-   * We have no task list in test, so there is no need for the real client either
-   */
-  @MockitoBean
-  lateinit var camundaTaskListClient: CamundaTaskListClient
-
   @BeforeEach
   fun setUp() {
     val workerId = this.javaClass.simpleName
@@ -66,7 +57,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
     this.processTestHelper = C8ProcessTestHelper(
 
       startProcessApi = StartProcessApiImpl(camundaClient = client),
-      userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository),
+      userTaskCompletionApi = C8CamundaClientUserTaskNativeCompletionApiImpl(this.client, subscriptionRepository),
       serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
         this.client,
         subscriptionRepository,
@@ -76,7 +67,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
       subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
         client, subscriptionRepository, workerId, 3L
       ),
-      pullUserTaskDelivery = PullUserTaskDelivery(taskListClient = camundaTaskListClient, subscriptionRepository = subscriptionRepository),
+      pullUserTaskDelivery = PullUserTaskDelivery(camundaClient = client, subscriptionRepository = subscriptionRepository),
       subscribingUserTaskDelivery = userTaskDelivery,
       subscriptionRepository = subscriptionRepository,
       evaluateDecisionApi = EvaluateDecisionApiImpl(this.client)

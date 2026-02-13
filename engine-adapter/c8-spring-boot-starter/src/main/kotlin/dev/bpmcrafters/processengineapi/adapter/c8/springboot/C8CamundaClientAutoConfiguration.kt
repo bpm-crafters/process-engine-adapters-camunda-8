@@ -2,11 +2,15 @@ package dev.bpmcrafters.processengineapi.adapter.c8.springboot
 
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SCHEDULED
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskJobCompletionApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskNativeCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.FailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
@@ -55,6 +59,8 @@ class C8CamundaClientAutoConfiguration {
   @Bean(name = ["c8-user-task-delivery"])
   @Qualifier("c8-user-task-delivery")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
+  // subscription delivery only valid if the job completion strategy is used
+  @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.completion-strategy"], havingValue = "job")
   fun subscribingRefreshingUserTaskDelivery(
     subscriptionRepository: SubscriptionRepository,
     camundaClient: CamundaClient,
@@ -84,13 +90,37 @@ class C8CamundaClientAutoConfiguration {
   @Bean("c8-user-task-completion")
   @Qualifier("c8-user-task-completion")
   @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.completion-strategy"], havingValue = "job")
-  fun zeebeUserTaskCompletionStrategy(
+  fun jobUserTaskCompletionStrategy(
     camundaClient: CamundaClient,
     subscriptionRepository: SubscriptionRepository
   ): UserTaskCompletionApi =
-    C8CamundaClientUserTaskCompletionApiImpl(
+    C8CamundaClientUserTaskJobCompletionApiImpl(
       camundaClient = camundaClient,
       subscriptionRepository = subscriptionRepository
+    )
+
+  @Bean("c8-user-task-completion")
+  @Qualifier("c8-user-task-completion")
+  @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.completion-strategy"], havingValue = "native")
+  fun nativeUserTaskCompletionStrategy(
+    camundaClient: CamundaClient,
+    subscriptionRepository: SubscriptionRepository
+  ): UserTaskCompletionApi =
+    C8CamundaClientUserTaskNativeCompletionApiImpl(
+      camundaClient = camundaClient,
+      subscriptionRepository = subscriptionRepository
+    )
+
+  @Bean("c8-user-task-delivery")
+  @Qualifier("c8-user-task-delivery")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = SCHEDULED)
+  fun scheduledUserTaskDelivery(
+    subscriptionRepository: SubscriptionRepository,
+    camundaClient: CamundaClient,
+  ): PullUserTaskDelivery =
+    PullUserTaskDelivery(
+      subscriptionRepository = subscriptionRepository,
+      camundaClient = camundaClient
     )
 
 }
