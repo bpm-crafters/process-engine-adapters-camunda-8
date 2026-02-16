@@ -31,7 +31,6 @@
     <dependency>
       <groupId>dev.bpm-crafters.process-engine-api</groupId>
       <artifactId>process-engine-api</artifactId>
-      <version>${process-engine-api.version}</version>
     </dependency>
 
     <dependency>
@@ -101,7 +100,6 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-process-test-spring</artifactId>
-      <version>${camunda-process-test.version}</version>
       <scope>compile</scope>
     </dependency>
 

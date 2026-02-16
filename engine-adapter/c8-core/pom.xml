@@ -15,30 +15,25 @@
     <dependency>
       <groupId>dev.bpm-crafters.process-engine-api</groupId>
       <artifactId>process-engine-api</artifactId>
-      <version>${process-engine-api.version}</version>
     </dependency>
     <dependency>
       <groupId>dev.bpm-crafters.process-engine-api</groupId>
       <artifactId>process-engine-api-impl</artifactId>
-      <version>${process-engine-api.version}</version>
     </dependency>
 
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-protocol</artifactId>
-      <version>${camunda-client-java.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-client-java</artifactId>
-      <version>${camunda-client-java.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-tasklist-client-java</artifactId>
-      <version>${camunda-tasklist-client-java.version}</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -50,7 +45,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-kotlin</artifactId>
-      <version>${jackson-module-kotlin.version}</version>
       <scope>provided</scope>
     </dependency>
 
@@ -71,7 +65,6 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-process-test-spring</artifactId>
-      <version>${camunda-process-test.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
