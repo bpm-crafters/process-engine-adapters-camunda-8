@@ -99,7 +99,9 @@ class SubscribingServiceTaskDelivery(
       val payloadDescription = subscription.payloadDescription
       val tenantId = subscription.restrictions[CommonRestrictions.TENANT_ID]
       this.timeout(getLockDuration(subscription))
-      if (tenantId != null) this.tenantId(tenantId)
+      if (tenantId != null) {
+        this.tenantId(tenantId)
+      }
       if (!payloadDescription.isNullOrEmpty()) {
         this.fetchVariables(payloadDescription.toList())
       }
