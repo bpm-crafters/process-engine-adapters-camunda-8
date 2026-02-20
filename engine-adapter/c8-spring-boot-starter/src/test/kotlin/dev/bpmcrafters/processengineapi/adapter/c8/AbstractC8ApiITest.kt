@@ -38,6 +38,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
     const val DMN = "decision/main_decision.dmn"
 
     const val USER_TASK = "user-perform-task"
+    const val USER_TASK_JOB_BASED = "user-perform-task-job-based"
     const val EXTERNAL_TASK = "execute-action-external"
   }
 

@@ -41,8 +41,6 @@ class C8SubscriptionAutoConfiguration {
 
   @Bean("c8-user-task-delivery-subscription")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
-  // subscription delivery only valid if the job completion strategy is used
-  @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.type"], havingValue = "job")
   fun subscribingUserTaskDeliveryBinding(
     @Qualifier("c8-user-task-delivery")
     subscribingRefreshingUserTaskDelivery: SubscribingRefreshingUserTaskDelivery,

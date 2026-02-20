@@ -53,10 +53,6 @@ class C8AdapterProperties(
 
   data class UserTasks(
     /**
-     * Type of user tasks to use.
-     */
-    val type: UserTaskType,
-    /**
      * Delivery strategy for user tasks.
      */
     val deliveryStrategy: UserTaskDeliveryStrategy,
@@ -67,26 +63,11 @@ class C8AdapterProperties(
   )
 
   /**
-   * Type of user tasks to use.
-   */
-  enum class UserTaskType {
-    /**
-     * Native user tasks of Camunda.
-     */
-    NATIVE,
-
-    /**
-     * Deprecated job worker implementation for user tasks.
-     */
-    JOB
-  }
-
-  /**
    * Strategy to deliver user tasks.
    */
   enum class UserTaskDeliveryStrategy {
     /**
-     * Scheduled, based on task list client.
+     * Scheduled, based on native camunda tasks.
      */
     SCHEDULED,
 

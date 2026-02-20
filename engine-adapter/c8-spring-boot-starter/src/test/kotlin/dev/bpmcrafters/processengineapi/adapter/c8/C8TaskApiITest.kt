@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 class C8TaskApiITest : AbstractC8ApiITest() {
 
   @Test
-  @Disabled("FIXME")
   fun `should get subscribed for user task with pull strategy`() {
     GIVEN
       .`process helper`(this.processTestHelper)
@@ -29,7 +28,7 @@ class C8TaskApiITest : AbstractC8ApiITest() {
     GIVEN
       .`process helper`(this.processTestHelper)
       .AND
-      .`a active user task subscription`(USER_TASK)
+      .`a active user task subscription`(USER_TASK_JOB_BASED)
       .`subscribe for tasks`()
 
     WHEN
@@ -40,7 +39,6 @@ class C8TaskApiITest : AbstractC8ApiITest() {
   }
 
   @Test
-  @Disabled("FIXME")
   fun `should not get subscribed for user task with pull strategy after unsubscribe`() {
     GIVEN
       .`process helper`(this.processTestHelper)
@@ -56,12 +54,11 @@ class C8TaskApiITest : AbstractC8ApiITest() {
   }
 
   @Test
-  @Disabled("FIXME")
   fun `should not get subscribed for user task with subscribing strategy after unsubscribe`() {
     GIVEN
       .`process helper`(this.processTestHelper)
       .AND
-      .`a active user task subscription`(USER_TASK)
+      .`a active user task subscription`(USER_TASK_JOB_BASED)
       .`subscribe for tasks`()
 
     WHEN
@@ -87,7 +84,6 @@ class C8TaskApiITest : AbstractC8ApiITest() {
   }
 
   @Test
-  @Disabled("FIXME")
   fun `should not get subscribed for external task with pull strategy after unsubscribe`() {
     GIVEN
       .`process helper`(this.processTestHelper)
@@ -103,7 +99,6 @@ class C8TaskApiITest : AbstractC8ApiITest() {
   }
 
   @Test
-  @Disabled("FIXME")
   fun `should complete a user task`() {
     GIVEN
       .`process helper`(this.processTestHelper)
@@ -120,7 +115,6 @@ class C8TaskApiITest : AbstractC8ApiITest() {
   }
 
   @Test
-  @Disabled("FIXME")
   fun `should complete a external task`() {
     GIVEN
       .`process helper`(this.processTestHelper)

@@ -55,8 +55,12 @@ class PullUserTaskDelivery(
 
               deliveredTaskIds.remove(taskId)
 
-              val loadedVariables = camundaClient.newUserTaskVariableSearchRequest(task.userTaskKey).send().join().items()
-              val variablesFromTask: Map<String, Any?> = loadedVariables.associate { variable ->
+              val variableRequest = camundaClient.newUserTaskVariableSearchRequest(task.userTaskKey).apply {
+                if (!activeSubscription.payloadDescription.isNullOrEmpty()) {
+                  this.filter { it.name { variable -> variable.`in`(activeSubscription.payloadDescription!!.toList()) } }
+                }
+              }
+              val variablesFromTask: Map<String, Any?> = variableRequest.send().join().items().associate { variable ->
                 variable.name to variable.value
               }
 

@@ -41,9 +41,10 @@ class BaseThenStage : Stage<BaseThenStage>() {
   }
 
   fun `we should get notified about a new user task with pull strategy`() = step {
-    processTestHelper.triggerPullingUserTaskDeliveryManually()
-
-    await().untilAsserted { assertThat(userTaskId).isNotEmpty() }
+    await().untilAsserted {
+      processTestHelper.triggerPullingUserTaskDeliveryManually()
+      assertThat(userTaskId).isNotEmpty()
+    }
   }
 
   fun `we should get notified about a new user task with subscribing strategy`() = step {
@@ -51,9 +52,10 @@ class BaseThenStage : Stage<BaseThenStage>() {
   }
 
   fun `we should not get notified about a new user task with pull strategy`() = step {
-    processTestHelper.triggerPullingUserTaskDeliveryManually()
-
-    await().untilAsserted { assertThat(userTaskId).isNull() }
+    await().untilAsserted {
+      processTestHelper.triggerPullingUserTaskDeliveryManually()
+      assertThat(userTaskId).isNull()
+    }
   }
 
   fun `we should not get notified about a new user task with subscribing strategy`() = step {

@@ -58,8 +58,6 @@ class C8CamundaClientAutoConfiguration {
   @Bean(name = ["c8-user-task-delivery"])
   @Qualifier("c8-user-task-delivery")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
-  // subscription delivery only valid if the job completion strategy is used
-  @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.type"], havingValue = "job")
   fun subscribingRefreshingUserTaskDelivery(
     subscriptionRepository: SubscriptionRepository,
     camundaClient: CamundaClient,
@@ -88,7 +86,7 @@ class C8CamundaClientAutoConfiguration {
 
   @Bean("c8-user-task-completion")
   @Qualifier("c8-user-task-completion")
-  @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.type"], havingValue = "job")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
   fun jobUserTaskCompletionStrategy(
     camundaClient: CamundaClient,
     subscriptionRepository: SubscriptionRepository
@@ -100,8 +98,8 @@ class C8CamundaClientAutoConfiguration {
 
   @Bean("c8-user-task-completion")
   @Qualifier("c8-user-task-completion")
-  @ConditionalOnProperty(prefix = DEFAULT_PREFIX, name = ["user-tasks.type"], havingValue = "native")
-  fun nativeUserTaskCompletionStrategy(
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = SCHEDULED)
+  fun userTaskCompletionStrategy(
     camundaClient: CamundaClient,
     subscriptionRepository: SubscriptionRepository
   ): UserTaskCompletionApi =
