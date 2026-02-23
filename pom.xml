@@ -24,7 +24,7 @@
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
-    <camunda.version>8.8.11</camunda.version>
+    <camunda.version>8.8.14</camunda.version>
     <camunda-tasklist-client-java.version>8.8.3</camunda-tasklist-client-java.version>
 
     <!-- TEST -->
