@@ -35,7 +35,6 @@ class SubscribingRefreshingUserTaskDelivery(
     if (subscriptions.isNotEmpty()) {
       logger.trace { "PROCESS-ENGINE-C8-040: subscribing user tasks for subscriptions: $subscriptions" }
       subscriptions
-        .filter { it.taskType == TaskType.USER }
         .forEach { activeSubscription ->
           // this is a job to subscribe to.
           val subscribedJobWorker = camundaClient
@@ -51,7 +50,7 @@ class SubscribingRefreshingUserTaskDelivery(
             .open()
 
           // add to registry, to be able to close worker and stop receiving updates on unsubscribe
-          jobWorkerRegistry + (activeSubscription.taskDescriptionKey to subscribedJobWorker)
+          jobWorkerRegistry = jobWorkerRegistry + (activeSubscription.taskDescriptionKey!! to subscribedJobWorker)
         }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-046: not subscribing for user tasks, no active subscription found." }

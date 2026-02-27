@@ -20,7 +20,7 @@ class C8CamundaClientUserTaskCompletionApiImpl(
   override fun completeTask(cmd: CompleteTaskCmd): CompletableFuture<Empty> {
     logger.debug { "PROCESS-ENGINE-C8-012: completing user task ${cmd.taskId}." }
     camundaClient
-      .newCompleteCommand(cmd.taskId.toLong())
+      .newCompleteUserTaskCommand(cmd.taskId.toLong())
       .variables(cmd.get())
       .send()
       .join()
@@ -32,17 +32,7 @@ class C8CamundaClientUserTaskCompletionApiImpl(
   }
 
   override fun completeTaskByError(cmd: CompleteTaskByErrorCmd): CompletableFuture<Empty> {
-    camundaClient
-      .newThrowErrorCommand(cmd.taskId.toLong())
-      .errorCode(cmd.errorCode)
-      .variables(cmd.get())
-      .send()
-      .join()
-    logger.debug { "PROCESS-ENGINE-C8-014: throwing error ${cmd.errorCode} in user task ${cmd.taskId}." }
-    subscriptionRepository.deactivateSubscriptionForTask(cmd.taskId)?.apply {
-      logger.debug { "PROCESS-ENGINE-C8-013: successfully thrown error ${cmd.errorCode} in user task ${cmd.taskId}." }
-      termination.accept(TaskInformation(cmd.taskId, emptyMap()).withReason(TaskInformation.COMPLETE))
-    }
-    return CompletableFuture.completedFuture(Empty)
+    throw UnsupportedOperationException("Throwing BPMN errors is not supported by Camunda Client for native user tasks.")
   }
+
 }

@@ -27,16 +27,6 @@
       <groupId>io.camunda</groupId>
       <artifactId>camunda-spring-boot-starter</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>camunda-tasklist-client-java</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.camunda</groupId>
-          <artifactId>camunda-client-java</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>

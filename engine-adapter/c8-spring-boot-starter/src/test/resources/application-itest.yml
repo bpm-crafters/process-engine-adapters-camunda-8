@@ -21,7 +21,6 @@ dev:
             delivery-strategy: SUBSCRIPTION
             worker-id: execute-action-external
           user-tasks:
-            delivery-strategy: SUBSCRIPTION_REFRESHING # or scheduled
+            type: native
+            delivery-strategy: SCHEDULED
             schedule-delivery-fixed-rate-in-seconds: 10
-            tasklist-url: http://localhost
-            completion-strategy: job # or tasklist

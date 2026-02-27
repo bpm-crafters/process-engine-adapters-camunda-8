@@ -5,10 +5,8 @@ import com.tngtech.jgiven.annotation.ExpectedScenarioState
 import dev.bpmcrafters.processengineapi.decision.DecisionEvaluationResult
 import io.toolisticon.testing.jgiven.JGivenKotlinStage
 import io.toolisticon.testing.jgiven.step
-import junit.framework.TestCase.assertEquals
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.assertNotNull
 import java.util.function.Function
 import kotlin.reflect.KClass
 
@@ -43,9 +41,10 @@ class BaseThenStage : Stage<BaseThenStage>() {
   }
 
   fun `we should get notified about a new user task with pull strategy`() = step {
-    processTestHelper.triggerPullingUserTaskDeliveryManually()
-
-    await().untilAsserted { assertThat(userTaskId).isNotEmpty() }
+    await().untilAsserted {
+      processTestHelper.triggerPullingUserTaskDeliveryManually()
+      assertThat(userTaskId).isNotEmpty()
+    }
   }
 
   fun `we should get notified about a new user task with subscribing strategy`() = step {
@@ -53,9 +52,10 @@ class BaseThenStage : Stage<BaseThenStage>() {
   }
 
   fun `we should not get notified about a new user task with pull strategy`() = step {
-    processTestHelper.triggerPullingUserTaskDeliveryManually()
-
-    await().untilAsserted { assertThat(userTaskId).isNull() }
+    await().untilAsserted {
+      processTestHelper.triggerPullingUserTaskDeliveryManually()
+      assertThat(userTaskId).isNull()
+    }
   }
 
   fun `we should not get notified about a new user task with subscribing strategy`() = step {
@@ -75,7 +75,7 @@ class BaseThenStage : Stage<BaseThenStage>() {
   }
 
   fun `we should have thrown`(clazz: KClass<out Throwable>) = step {
-    assertNotNull(throwableCaught)
+    assertThat(throwableCaught).isNotNull
     assertThat( clazz.isInstance(throwableCaught)).isTrue()
   }
 
@@ -90,7 +90,7 @@ class BaseThenStage : Stage<BaseThenStage>() {
   fun `should interpretation fail`(clazz: KClass<out Throwable>) = `we should have thrown`(clazz)
 
   fun `interpreted result is`(expectedResult: Any?)  = step {
-      assertEquals(this.interpretedDecisionResult, expectedResult)
+      assertThat(this.interpretedDecisionResult).isEqualTo(expectedResult)
   }
 
 }

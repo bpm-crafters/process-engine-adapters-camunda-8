@@ -1,6 +1,5 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.CorrelationApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
