@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: Java Camunda Platform 8 SaaS
+
+camunda:
+  client:
+    mode: saas
+    region: ${ZEEBE_REGION}
+    cluster-id: ${ZEEBE_CLUSTER_ID}
+    auth:
+      clientId: ${ZEEBE_CLIENT_ID}
+      clientSecret: ${ZEEBE_CLIENT_SECRET}
