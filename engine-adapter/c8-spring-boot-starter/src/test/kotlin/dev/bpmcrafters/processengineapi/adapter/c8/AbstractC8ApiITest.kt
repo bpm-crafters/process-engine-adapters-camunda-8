@@ -59,19 +59,19 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
 
       startProcessApi = StartProcessApiImpl(camundaClient = client),
       userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository),
-      serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
-        this.client,
-        subscriptionRepository,
-        LinearMemoryFailureRetrySupplier(3, 3L)
-      ),
       taskSubscriptionApi = C8TaskSubscriptionApiImpl(subscriptionRepository, userTaskDelivery),
       subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
-        client, subscriptionRepository, workerId, 3L
+        client, subscriptionRepository, workerId, 3L, 3L
       ),
       pullUserTaskDelivery = PullUserTaskDelivery(camundaClient = client, subscriptionRepository = subscriptionRepository),
       subscribingUserTaskDelivery = userTaskDelivery,
       subscriptionRepository = subscriptionRepository,
-      evaluateDecisionApi = EvaluateDecisionApiImpl(this.client)
+      evaluateDecisionApi = EvaluateDecisionApiImpl(this.client),
+      serviceTaskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
+        camundaClient = client,
+        subscriptionRepository = subscriptionRepository,
+        failureRetrySupplier = LinearMemoryFailureRetrySupplier(3, 3L)
+      ),
     )
 
     val event: DeploymentEvent = client.newDeployResourceCommand()
