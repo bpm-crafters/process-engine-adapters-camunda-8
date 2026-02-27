@@ -1,0 +1,9 @@
+dev:
+  bpm-crafters:
+    process-api:
+      adapter:
+        c8:
+          user-tasks:
+            type: job
+            delivery-strategy: subscription_refreshing
+            schedule-delivery-fixed-rate-in-seconds: 5

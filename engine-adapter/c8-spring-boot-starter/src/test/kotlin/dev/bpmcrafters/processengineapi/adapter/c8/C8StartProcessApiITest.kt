@@ -23,4 +23,11 @@ class C8StartProcessApiITest : AbstractC8ApiITest() {
       .`we should have a running process`()
   }
 
+  @Test
+  fun `should start process by definition at element without payload`() {
+    WHEN
+      .`start process by definition at element`(KEY, USER_TASK)
+    THEN
+      .`we should have a running process`()
+  }
 }

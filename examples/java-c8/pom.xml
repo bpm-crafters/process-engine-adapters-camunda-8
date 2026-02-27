@@ -5,7 +5,7 @@
   <parent>
     <groupId>dev.bpm-crafters.process-engine-examples</groupId>
     <artifactId>process-engine-api-example-root-c8</artifactId>
-    <version>2025.11.1</version>
+    <version>2026.02.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -25,25 +25,17 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>camunda-spring-boot-starter</artifactId>
-      <version>${camunda-spring-boot-starter.version}</version>
+      <artifactId>camunda-spring-boot-4-starter</artifactId>
     </dependency>
+
     <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>camunda-tasklist-client-java</artifactId>
-      <version>${camunda-tasklist-client-java.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>io.camunda</groupId>
-          <artifactId>camunda-client-java</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>com.fasterxml.jackson.module</groupId>
+      <artifactId>jackson-module-kotlin</artifactId>
     </dependency>
 
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-process-test-spring</artifactId>
-      <version>${camunda-process-test.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -65,5 +57,19 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <api.version>1.44</api.version>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

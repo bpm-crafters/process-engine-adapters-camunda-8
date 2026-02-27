@@ -48,7 +48,12 @@ class C8AdapterProperties(
     /**
      * Timeout in seconds before making a retry.
      */
-    val retryTimeoutInSeconds: Long = 5L
+    val retryTimeoutInSeconds: Long = 5L,
+
+    /**
+     * Time in seconds to lock a service task. Default is 5 minutes.
+     */
+    val lockTimeInSeconds: Long = 300L,
   )
 
   data class UserTasks(
@@ -57,40 +62,17 @@ class C8AdapterProperties(
      */
     val deliveryStrategy: UserTaskDeliveryStrategy,
     /**
-     * Completion strategy for user tasks.
-     */
-    val completionStrategy: UserTaskCompletionStrategy,
-    /**
      * Fixed rate for scheduled user task delivery.
      */
     val scheduleDeliveryFixedRateInSeconds: Long = 5L,
-    /**
-     * URL of the task list.
-     */
-    val tasklistUrl: String = "https://\${zeebe.client.cloud.region}.tasklist.camunda.io/\${zeebe.client.cloud.clusterId}"
   )
-
-  /**
-   * Strategy to complete user tasks.
-   */
-  enum class UserTaskCompletionStrategy {
-    /**
-     * Use task list client.
-     */
-    TASKLIST,
-
-    /**
-     * Use camunda client.
-     */
-    JOB
-  }
 
   /**
    * Strategy to deliver user tasks.
    */
   enum class UserTaskDeliveryStrategy {
     /**
-     * Scheduled, based on task list client.
+     * Scheduled, based on native camunda tasks.
      */
     SCHEDULED,
 

@@ -3,6 +3,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8.springboot.schedule
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterAutoConfiguration
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterEnabledCondition
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SCHEDULED
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnUserTaskDeliveryStrategy
@@ -13,6 +14,7 @@ import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
@@ -42,9 +44,10 @@ class C8SchedulingAutoConfiguration {
   @Qualifier("c8-task-scheduler")
   @ConditionalOnMissingBean
   fun taskScheduler(): TaskScheduler {
-    val threadPoolTaskScheduler = ThreadPoolTaskScheduler()
-    threadPoolTaskScheduler.poolSize = 2 // we have two schedulers, one for user tasks one for service tasks
-    threadPoolTaskScheduler.threadNamePrefix = "C8REMOTE-SCHEDULER-"
+    val threadPoolTaskScheduler = ThreadPoolTaskScheduler().apply {
+      poolSize = 2 // we have two schedulers, one for user tasks one for service tasks
+      setThreadNamePrefix("C8REMOTE-SCHEDULER-")
+    }
     return threadPoolTaskScheduler
   }
 

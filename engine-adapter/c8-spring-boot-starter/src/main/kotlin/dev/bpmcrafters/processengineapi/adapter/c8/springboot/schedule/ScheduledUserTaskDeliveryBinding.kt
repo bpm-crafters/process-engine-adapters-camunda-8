@@ -15,7 +15,7 @@ private val logger = KotlinLogging.logger {}
 open class ScheduledUserTaskDeliveryBinding(
     private val pullUserTaskDelivery: PullUserTaskDelivery,
     private val c8AdapterProperties: C8AdapterProperties,
-    @Qualifier("c8-task-scheduler")
+    @param:Qualifier("c8-task-scheduler")
     private val c8taskScheduler: TaskScheduler
 ) : SchedulingConfigurer {
 

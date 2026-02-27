@@ -5,13 +5,13 @@
   <parent>
     <groupId>dev.bpm-crafters.maven.parent</groupId>
     <artifactId>maven-parent</artifactId>
-    <version>2025.08.1</version>
+    <version>2026.02.1</version>
     <relativePath/>
   </parent>
 
   <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
   <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
-  <version>2025.11.1</version>
+  <version>2026.02.1</version>
   <name>POM: Camunda 8 Adapter Project root</name>
   <description>Process Engine Adapters Camunda 8</description>
   <url>https://github.com/bpm-crafters/process-engine-adapters-camunda-8/</url>
@@ -19,23 +19,22 @@
 
   <properties>
     <!-- COMMON GLOBAL -->
-    <spring-boot.version>3.5.7</spring-boot.version>
-    <process-engine-api.version>1.4</process-engine-api.version>
+    <spring-boot.version>4.0.2</spring-boot.version>
+    <process-engine-api.version>1.5</process-engine-api.version>
+    <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
-    <camunda-client-java.version>8.8.3</camunda-client-java.version>
-    <camunda-spring-boot-starter.version>8.8.3</camunda-spring-boot-starter.version>
-    <camunda-process-test.version>8.8.3</camunda-process-test.version>
-    <camunda-tasklist-client-java.version>8.8.1</camunda-tasklist-client-java.version>
+    <camunda.version>8.8.14</camunda.version>
 
     <!-- TEST -->
-    <mockito.version>6.1.0</mockito.version>
-    <assertj.version>3.27.6</assertj.version>
+    <mockito.version>6.2.3</mockito.version>
+    <assertj.version>3.27.7</assertj.version>
     <junit5.version>5.13.3</junit5.version>
     <jgiven.version>2.0.2</jgiven.version>
     <awaitility.version>4.3.0</awaitility.version>
-    <mockk.version>1.14.6</mockk.version>
+    <mockk.version>1.14.9</mockk.version>
     <slf4j.verion>2.0.17</slf4j.verion>
+    <testcontainers.version>2.0.3</testcontainers.version>
 
   </properties>
 
@@ -50,11 +49,47 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
         <groupId>io.toolisticon.spring</groupId>
         <artifactId>spring-boot-support-bom</artifactId>
         <version>1.0.1</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>zeebe-bom</artifactId>
+        <version>${camunda.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.camunda</groupId>
+        <artifactId>camunda-spring-boot-4-starter</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.bpm-crafters.process-engine-api</groupId>
+        <artifactId>process-engine-api</artifactId>
+        <version>${process-engine-api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.bpm-crafters.process-engine-api</groupId>
+        <artifactId>process-engine-api-impl</artifactId>
+        <version>${process-engine-api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.assertj</groupId>

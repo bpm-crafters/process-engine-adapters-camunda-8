@@ -48,6 +48,20 @@ class StartProcessApiImpl(
             .toProcessInformation()
         }
 
+      is StartProcessByDefinitionAtElementCmd ->
+        CompletableFuture.supplyAsync {
+          camundaClient
+            .newCreateInstanceCommand()
+            .bpmnProcessId(cmd.definitionKey)
+            .latestVersion()
+            .variables(cmd.payloadSupplier.get())
+            .startBeforeElement(cmd.elementId)
+            .applyRestrictions(ensureSupported(cmd.restrictions))
+            .send()
+            .get()
+            .toProcessInformation()
+        }
+
       else -> throw IllegalArgumentException("Unsupported start command $cmd")
     }
   }

@@ -3,6 +3,9 @@ package dev.bpmcrafters.processengineapi.test
 import com.tngtech.jgiven.Stage
 import com.tngtech.jgiven.annotation.ExpectedScenarioState
 import com.tngtech.jgiven.annotation.ProvidedScenarioState
+import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionAtElementCmd
+import dev.bpmcrafters.processengineapi.decision.DecisionByRefEvaluationCommand
+import dev.bpmcrafters.processengineapi.decision.DecisionEvaluationResult
 import dev.bpmcrafters.processengineapi.process.StartProcessByDefinitionCmd
 import dev.bpmcrafters.processengineapi.process.StartProcessByMessageCmd
 import dev.bpmcrafters.processengineapi.task.*
@@ -31,6 +34,12 @@ class BaseGivenWhenStage : Stage<BaseGivenWhenStage>() {
   @ProvidedScenarioState
   lateinit var taskSubscription: TaskSubscription
 
+  @ProvidedScenarioState
+  var decisionResult: DecisionEvaluationResult? = null
+
+  @ProvidedScenarioState
+  var throwableCaught: Throwable? = null
+
   fun `start process by definition`(definitionKey: String) = step {
     instanceId = processTestHelper.getStartProcessApi().startProcess(
       StartProcessByDefinitionCmd(
@@ -45,6 +54,16 @@ class BaseGivenWhenStage : Stage<BaseGivenWhenStage>() {
       StartProcessByDefinitionCmd(
         definitionKey = definitionKey,
         payloadSupplier = { mapOf(singlePayload) }
+      )
+    ).get().instanceId
+  }
+
+  fun `start process by definition at element`(definitionKey: String, elementId: String) = step() {
+    instanceId = processTestHelper.getStartProcessApi().startProcess(
+      StartProcessByDefinitionAtElementCmd(
+        definitionKey = definitionKey,
+        elementId = elementId,
+        payloadSupplier = { emptyMap() }
       )
     ).get().instanceId
   }
@@ -114,6 +133,19 @@ class BaseGivenWhenStage : Stage<BaseGivenWhenStage>() {
   fun `unsubscribe user task subscription`() = step { unsubscribeTask() }
 
   fun `unsubscribe external task subscription`() = step { unsubscribeTask() }
+
+  fun `evaluate decision by ref key with payload`(decisionDefinitionId: String, payload: Map<String, Any>) = step {
+    processTestHelper.getEvaluateDecisionApi().evaluateDecision(
+      DecisionByRefEvaluationCommand(
+        decisionRef = decisionDefinitionId,
+        payload =  payload,
+        restrictions = mapOf(),
+      )
+    ).handle { res, ex ->
+        this.throwableCaught = ex
+        this.decisionResult = res
+    }.get()
+  }
 
   private fun subscribeTask(taskType: TaskType, taskDescriptionKey: String, taskHandler: TaskHandler) = processTestHelper.getTaskSubscriptionApi().subscribeForTask(
     SubscribeForTaskCmd(

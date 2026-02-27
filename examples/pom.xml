@@ -5,7 +5,7 @@
   <parent>
     <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
     <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
-    <version>2025.11.1</version>
+    <version>2026.02.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -20,27 +20,17 @@
     <deploy.skip>true</deploy.skip>
     <gpg.skip>true</gpg.skip>
     <dokka.skip>true</dokka.skip>
+    <springdoc-openapi-starter.version>3.0.1</springdoc-openapi-starter.version>
   </properties>
 
   <modules>
     <module>java-common-fixture</module>
     <module>java-c8</module>
+    <module>java-c8-sb3</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>3.5.7</version>
-        <scope>import</scope>
-        <type>pom</type>
-      </dependency>
-      <dependency>
-        <groupId>dev.bpm-crafters.process-engine-api</groupId>
-        <artifactId>process-engine-api</artifactId>
-        <version>${process-engine-api.version}</version>
-      </dependency>
       <dependency>
         <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
         <artifactId>process-engine-adapter-camunda-platform-c8-spring-boot-starter</artifactId>
@@ -54,7 +44,7 @@
       <dependency>
         <groupId>org.springdoc</groupId>
         <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        <version>2.8.14</version>
+        <version>${springdoc-openapi-starter.version}</version>
       </dependency>
 
     </dependencies>
