@@ -61,7 +61,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
       userTaskCompletionApi = C8CamundaClientUserTaskCompletionApiImpl(this.client, subscriptionRepository),
       taskSubscriptionApi = C8TaskSubscriptionApiImpl(subscriptionRepository, userTaskDelivery),
       subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
-        client, subscriptionRepository, workerId, 3L
+        client, subscriptionRepository, workerId, 3L, 3L
       ),
       pullUserTaskDelivery = PullUserTaskDelivery(camundaClient = client, subscriptionRepository = subscriptionRepository),
       subscribingUserTaskDelivery = userTaskDelivery,
@@ -71,13 +71,6 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
         camundaClient = client,
         subscriptionRepository = subscriptionRepository,
         failureRetrySupplier = LinearMemoryFailureRetrySupplier(3, 3L)
-      ),
-      subscribingServiceTaskDelivery = SubscribingServiceTaskDelivery(
-        camundaClient = client,
-        subscriptionRepository = subscriptionRepository,
-        workerId = workerId,
-        retryTimeoutInSeconds = 3L,
-        lockDurationInSeconds = 3L
       ),
     )
 
