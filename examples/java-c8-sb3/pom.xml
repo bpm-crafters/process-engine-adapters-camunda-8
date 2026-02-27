@@ -9,8 +9,13 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>process-engine-api-example-java-c8</artifactId>
-  <name>Example: Java C8</name>
+  <artifactId>process-engine-api-example-java-c8-sb3</artifactId>
+  <name>Example: Java C8 Spring Boot 3</name>
+
+  <properties>
+    <spring-boot.version>3.5.7</spring-boot.version>
+    <springdoc-openapi-starter.version>2.8.15</springdoc-openapi-starter.version>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -25,7 +30,7 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>camunda-spring-boot-4-starter</artifactId>
+      <artifactId>camunda-spring-boot-starter</artifactId>
     </dependency>
 
     <dependency>
