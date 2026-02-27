@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0jyd698" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.25.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.4.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0jyd698" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.44.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
   <bpmn:process id="simple-process-1" name="Simple Process" isExecutable="true">
     <bpmn:startEvent id="started" name="Started">
       <bpmn:outgoing>Flow_14ng1om</bpmn:outgoing>
@@ -20,7 +20,8 @@
     <bpmn:userTask id="user-perform-task" name="Perform&#10;User&#10;Task">
       <bpmn:extensionElements>
         <zeebe:assignmentDefinition assignee="kermit" candidateGroups="avengers" candidateUsers="gonzo, fozzy" />
-        <zeebe:formDefinition formKey="user-task-form-1" />
+        <zeebe:formDefinition externalReference="user-task-form-1" />
+        <zeebe:userTask />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1se8wg9</bpmn:incoming>
       <bpmn:outgoing>Flow_08tjrzz</bpmn:outgoing>

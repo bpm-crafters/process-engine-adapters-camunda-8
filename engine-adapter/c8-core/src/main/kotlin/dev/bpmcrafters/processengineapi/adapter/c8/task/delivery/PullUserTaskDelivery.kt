@@ -6,16 +6,16 @@ import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.impl.task.filterBySubscription
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskType
-import io.camunda.tasklist.CamundaTaskListClient
-import io.camunda.tasklist.dto.Task
-import io.camunda.tasklist.dto.TaskSearch
-import io.camunda.tasklist.dto.TaskState
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.search.enums.UserTaskState
+import io.camunda.client.api.search.filter.UserTaskFilter
+import io.camunda.client.api.search.response.UserTask
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
 
 class PullUserTaskDelivery(
-  private val taskListClient: CamundaTaskListClient,
+  private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository
 ) : RefreshableDelivery {
 
@@ -26,66 +26,76 @@ class PullUserTaskDelivery(
     if (subscriptions.isNotEmpty()) {
       val deliveredTaskIds = subscriptionRepository.getDeliveredTaskIds(TaskType.USER).toMutableList()
       logger.trace { "PROCESS-ENGINE-C8-030: pulling user tasks for subscriptions: $subscriptions" }
-      taskListClient.getTasks(
-        TaskSearch()
-          .forSubscriptions(subscriptions)
-          .setWithVariables(true)
-          .setState(TaskState.CREATED) // deliver only open tasks
-      ).forEach { task ->
-        subscriptions
-          .firstOrNull { subscription -> subscription.matches(task) }
-          ?.let { activeSubscription ->
+      camundaClient.newUserTaskSearchRequest()
+        .filter {
+          it.forSubscriptions(subscriptions)
+            .state(UserTaskState.CREATED)
+        }
+        .send().join().items()
+        .forEach { task ->
+          subscriptions
+            .firstOrNull { subscription -> subscription.matches(task) }
+            ?.let { activeSubscription ->
 
-            subscriptionRepository.activateSubscriptionForTask(task.id, activeSubscription)
+              val taskId = task.userTaskKey.toString()
+              subscriptionRepository.activateSubscriptionForTask(taskId, activeSubscription)
 
-            val taskInformation = task.toTaskInformation().withReason(
-              if (deliveredTaskIds.contains(task.id) && subscriptionRepository.getActiveSubscriptionForTask(task.id) == activeSubscription) {
-                // remove from already delivered
-                deliveredTaskIds.remove(task.id)
-                // task was already delivered to this subscription
-                TaskInformation.UPDATE
-              } else {
-                // task is new for this subscription
-                TaskInformation.CREATE
+              val form = task.formKey?.let { camundaClient.newUserTaskGetFormRequest(task.userTaskKey).send().join() }
+              val taskInformation = task.toTaskInformation(form).withReason(
+                if (deliveredTaskIds.contains(taskId) && subscriptionRepository.getActiveSubscriptionForTask(taskId) == activeSubscription) {
+                  // remove from already delivered
+                  deliveredTaskIds.remove(taskId)
+                  // task was already delivered to this subscription
+                  TaskInformation.UPDATE
+                } else {
+                  // task is new for this subscription
+                  TaskInformation.CREATE
+                }
+              )
+
+              deliveredTaskIds.remove(taskId)
+
+              val variableRequest = camundaClient.newUserTaskVariableSearchRequest(task.userTaskKey).apply {
+                if (!activeSubscription.payloadDescription.isNullOrEmpty()) {
+                  this.filter { it.name { variable -> variable.`in`(activeSubscription.payloadDescription!!.toList()) } }
+                }
               }
-            )
+              val variablesFromTask: Map<String, Any?> = variableRequest.send().join().items().associate { variable ->
+                variable.name to variable.value
+              }
 
-            deliveredTaskIds.remove(task.id)
-            val variablesFromTask: Map<String, Any?> = task.variables?.associate { variable ->
-              variable.name to variable.value
-            } ?: mapOf()
+              val variables = variablesFromTask.filterBySubscription(activeSubscription)
 
-            val variables = variablesFromTask.filterBySubscription(activeSubscription)
-
-            try {
-              logger.debug { "PROCESS-ENGINE-C8-031: delivering user task ${task.id}." }
-              activeSubscription.action.accept(taskInformation, variables)
-              logger.debug { "PROCESS-ENGINE-C8-032: successfully delivered user task ${task.id}." }
-            } catch (e: Exception) {
-              logger.error { "PROCESS-ENGINE-C8-031: error delivering user task ${task.id}: ${e.message}" }
-              subscriptionRepository.deactivateSubscriptionForTask(taskId = task.id)
+              try {
+                logger.debug { "PROCESS-ENGINE-C8-031: delivering user task ${taskId}." }
+                activeSubscription.action.accept(taskInformation, variables)
+                logger.debug { "PROCESS-ENGINE-C8-032: successfully delivered user task ${taskId}." }
+              } catch (e: Exception) {
+                logger.error { "PROCESS-ENGINE-C8-031: error delivering user task ${taskId}: ${e.message}" }
+                subscriptionRepository.deactivateSubscriptionForTask(taskId = taskId)
+              }
             }
-          }
-      }
+        }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-035: pulling user tasks disabled, no subscriptions." }
     }
   }
 
-  private fun TaskSearch.forSubscriptions(subscriptions: List<TaskSubscriptionHandle>): TaskSearch {
+  private fun UserTaskFilter.forSubscriptions(subscriptions: List<TaskSubscriptionHandle>): UserTaskFilter {
     // FIXME -> support tenant on subscription
     // FIXME -> consider complex tent filtering
     return this
   }
 
-  private fun TaskSubscriptionHandle.matches(task: Task): Boolean =
+  private fun TaskSubscriptionHandle.matches(task: UserTask): Boolean =
     this.taskType == TaskType.USER
-      && (this.taskDescriptionKey == null || this.taskDescriptionKey == task.taskDefinitionId)
+      && (this.taskDescriptionKey == null || this.taskDescriptionKey == task.elementId)
       && this.restrictions.all {
       when (it.key) {
         CommonRestrictions.TENANT_ID -> it.value == task.tenantId
-        CommonRestrictions.PROCESS_INSTANCE_ID -> it.value == task.processInstanceKey
-        CommonRestrictions.PROCESS_DEFINITION_ID -> it.value == task.processDefinitionKey
+        CommonRestrictions.PROCESS_INSTANCE_ID -> it.value == task.processInstanceKey.toString()
+        CommonRestrictions.PROCESS_DEFINITION_ID -> it.value == task.processDefinitionKey.toString()
+        CommonRestrictions.PROCESS_DEFINITION_KEY -> it.value == task.bpmnProcessId
         // FIXME -> more restrictions
         else -> false
       }

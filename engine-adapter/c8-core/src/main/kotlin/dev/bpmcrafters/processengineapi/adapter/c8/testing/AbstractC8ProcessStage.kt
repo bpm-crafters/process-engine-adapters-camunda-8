@@ -13,7 +13,8 @@ import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.RefreshableDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
@@ -22,7 +23,13 @@ import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
 import dev.bpmcrafters.processengineapi.deploy.NamedResource.Companion.fromClasspath
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.process.StartProcessApi
-import dev.bpmcrafters.processengineapi.task.*
+import dev.bpmcrafters.processengineapi.task.CompleteTaskByErrorCmd
+import dev.bpmcrafters.processengineapi.task.CompleteTaskCmd
+import dev.bpmcrafters.processengineapi.task.FailTaskCmd
+import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
+import dev.bpmcrafters.processengineapi.task.TaskInformation
+import dev.bpmcrafters.processengineapi.task.TaskSubscriptionApi
+import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
 import dev.bpmcrafters.processengineapi.task.support.UserTaskSupport
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
@@ -80,7 +87,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
   protected lateinit var activatedJob: ActivatedJob
 
   @ProvidedScenarioState
-  private lateinit var subscribingRefreshingUserTaskDelivery: SubscribingRefreshingUserTaskDelivery
+  private lateinit var refreshableUserTaskDelivery: RefreshableDelivery
 
 
   /**
@@ -109,16 +116,14 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
       subscriptionRepository,
       LinearMemoryFailureRetrySupplier(3, 3L)
     )
-    subscribingRefreshingUserTaskDelivery = SubscribingRefreshingUserTaskDelivery(
+    refreshableUserTaskDelivery = PullUserTaskDelivery(
       this.client,
-      subscriptionRepository,
-      workerId,
-      3000
+      subscriptionRepository
     )
 
     taskSubscriptionApi = C8TaskSubscriptionApiImpl(
       subscriptionRepository,
-      this.subscribingRefreshingUserTaskDelivery
+      null
     )
 
     this.userTaskSupport = UserTaskSupport()
@@ -135,7 +140,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
     initialize()
 
     // activate delivery
-    subscribingRefreshingUserTaskDelivery.subscribe()
+    refreshableUserTaskDelivery.refresh()
     return self()
   }
 
@@ -264,6 +269,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
   open fun process_waits_in(taskDescriptionKey: String): SUBTYPE {
     // try to get the task
     Awaitility.await().untilAsserted {
+      refreshableUserTaskDelivery.refresh()
       val taskIdOption = findTaskByActivityId(taskDescriptionKey)
       Assertions.assertThat(taskIdOption).describedAs("Process is not waiting in user task $taskDescriptionKey", taskDescriptionKey).isNotEmpty()
       taskIdOption.ifPresent { taskId -> this.taskInformation = userTaskSupport.getTaskInformation(taskId) }
@@ -292,7 +298,7 @@ abstract class AbstractC8ProcessStage<SUBTYPE : AbstractC8ProcessStage<SUBTYPE>>
 
   open fun timer_passes(durationInSeconds: Long): SUBTYPE {
     processTestContext.increaseTime(java.time.Duration.ofSeconds(durationInSeconds))
-    subscribingRefreshingUserTaskDelivery.refresh()
+    refreshableUserTaskDelivery.refresh()
     return self()
   }
 
