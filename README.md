@@ -7,10 +7,25 @@
 [![Camunda Platform 8](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-26d07c)](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-26d07c)
 
 
-
 ## Purpose of the library
 
 This library provides an adapter implementation of Process Engine API for Camunda 8 process engine.
+
+## Compatibility
+
+| Adapter-8 Version                                                                                             | Camunda 8 Version | API Version |
+|---------------------------------------------------------------------------------------------------------------|-------------------|-------------|
+| [2026.02.2](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.02.2)         | 8.8.14            | 1.5         |
+| 2026.01.1                                                                                                     | 8.8.0             | 1.5         |
+| 2025.11.1                                                                                                     | 8.8.0             | 1.4         |
+| 2025.05.2                                                                                                     | 8.7.3             | 1.2         |
+| 2025.05.1                                                                                                     | 8.7.2             | 1.1         |
+| 2025.04.1                                                                                                     | 8.6.12            | 1.0         |
+
+## 📚 Documentation
+
+The documentation can be found [here](https://bpm-crafters.github.io/process-engine-api-docs/stable/) or in its
+respective [repository](https://github.com/bpm-crafters/process-engine-api-docs).
 
 ## Usage
 
@@ -46,14 +61,3 @@ If you want to rely on versions we used during creation of this library, you may
   <type>pom</type>
 </dependency>
 ```
-
-## Compatibility
-
-| Adapter-8 Version                                                                                             | Camunda 8 Version | API Version |
-|---------------------------------------------------------------------------------------------------------------|-------------------|-------------|
-| [2026.02.2](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.02.2)         | 8.8.14            | 1.5         |
-| 2026.01.1                                                                                                     | 8.8.0             | 1.5         |
-| 2025.11.1                                                                                                     | 8.8.0             | 1.4         |
-| 2025.05.2                                                                                                     | 8.7.3             | 1.2         |
-| 2025.05.1                                                                                                     | 8.7.2             | 1.1         |
-| 2025.04.1                                                                                                     | 8.6.12            | 1.0         |
