@@ -34,7 +34,7 @@
     <awaitility.version>4.3.0</awaitility.version>
     <mockk.version>1.14.9</mockk.version>
     <slf4j.verion>2.0.17</slf4j.verion>
-    <testcontainers.version>2.0.3</testcontainers.version>
+    <testcontainers.version>2.0.4</testcontainers.version>
 
   </properties>
 
