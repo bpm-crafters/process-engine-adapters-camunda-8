@@ -71,14 +71,14 @@
       </dependency>
       <dependency>
         <groupId>io.camunda</groupId>
-        <artifactId>zeebe-bom</artifactId>
+        <artifactId>camunda-bom</artifactId>
         <version>${camunda.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>io.camunda</groupId>
-        <artifactId>camunda-spring-boot-4-starter</artifactId>
+        <artifactId>camunda-spring-boot-starter</artifactId>
         <version>${camunda.version}</version>
       </dependency>
       <dependency>
