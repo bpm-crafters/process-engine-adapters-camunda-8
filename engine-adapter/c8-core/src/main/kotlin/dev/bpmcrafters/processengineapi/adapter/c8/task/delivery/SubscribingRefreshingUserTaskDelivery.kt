@@ -134,10 +134,14 @@ class SubscribingRefreshingUserTaskDelivery(
   /*
    * Additional restrictions to check.
    */
-  private fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean {
+  internal fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean {
     return this.taskType == TaskType.USER
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == job.elementId)
-      && this.restrictions.all {
+      && this.restrictions
+      .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
+        "workerLockDurationInMilliseconds"
+      )
+      .all {
       when (it.key) {
         CommonRestrictions.EXECUTION_ID -> it.value == "${job.elementInstanceKey}"
         CommonRestrictions.ACTIVITY_ID -> it.value == job.elementId
