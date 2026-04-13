@@ -11,15 +11,7 @@ import org.mockito.kotlin.whenever
 
 class SubscribingServiceTaskDeliveryTest {
 
-  // We need an instance of SubscribingServiceTaskDelivery because matches is an extension function
-  // on TaskSubscriptionHandle declared inside SubscribingServiceTaskDelivery class.
-  private val delivery = SubscribingServiceTaskDelivery(
-    camundaClient = mock(),
-    subscriptionRepository = mock(),
-    workerId = "test-worker",
-    retryTimeoutInSeconds = 10,
-    lockDurationInSeconds = 60
-  )
+  private val matcher = ActivatedJobMatcher()
 
   @Test
   fun `should match when all restrictions match`() {
@@ -41,9 +33,7 @@ class SubscribingServiceTaskDeliveryTest {
       whenever(it.tenantId).thenReturn("tenant-1")
     }
 
-    with(delivery) {
-      assertThat(subscription.matches(job)).isTrue()
-    }
+    assertThat(matcher.matches(subscription, job)).isTrue()
   }
 
   @Test
@@ -65,11 +55,9 @@ class SubscribingServiceTaskDeliveryTest {
       whenever(it.elementId).thenReturn("activity-1")
     }
 
-    with(delivery) {
-      // It should match even if workerLockDurationInMilliseconds is present in restrictions
-      // but not present in ActivatedJob (it's not even a field in ActivatedJob that we check)
-      assertThat(subscription.matches(job)).isTrue()
-    }
+    // It should match even if workerLockDurationInMilliseconds is present in restrictions
+    // but not present in ActivatedJob (it's not even a field in ActivatedJob that we check)
+    assertThat(matcher.matches(subscription, job)).isTrue()
   }
 
   @Test
@@ -87,9 +75,7 @@ class SubscribingServiceTaskDeliveryTest {
       whenever(it.type).thenReturn("test-topic")
     }
 
-    with(delivery) {
-      assertThat(subscription.matches(job)).isFalse()
-    }
+    assertThat(matcher.matches(subscription, job)).isFalse()
   }
 
   @Test
@@ -107,9 +93,7 @@ class SubscribingServiceTaskDeliveryTest {
       whenever(it.type).thenReturn("other-topic")
     }
 
-    with(delivery) {
-      assertThat(subscription.matches(job)).isFalse()
-    }
+    assertThat(matcher.matches(subscription, job)).isFalse()
   }
 
   @Test
@@ -130,9 +114,7 @@ class SubscribingServiceTaskDeliveryTest {
       whenever(it.elementId).thenReturn("activity-2")
     }
 
-    with(delivery) {
-      assertThat(subscription.matches(job)).isFalse()
-    }
+    assertThat(matcher.matches(subscription, job)).isFalse()
   }
 
   @Test
@@ -150,8 +132,6 @@ class SubscribingServiceTaskDeliveryTest {
       whenever(it.type).thenReturn("any-topic")
     }
 
-    with(delivery) {
-      assertThat(subscription.matches(job)).isTrue()
-    }
+    assertThat(matcher.matches(subscription, job)).isTrue()
   }
 }
