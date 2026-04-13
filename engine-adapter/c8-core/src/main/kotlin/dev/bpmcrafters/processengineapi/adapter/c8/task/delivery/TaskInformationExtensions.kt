@@ -9,7 +9,7 @@ import io.camunda.zeebe.protocol.Protocol
 
 fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
   taskId = "${this.key}",
-  meta = mapOf(
+  meta = metaOf(
     CommonRestrictions.TENANT_ID to this.tenantId,
     CommonRestrictions.ACTIVITY_ID to this.elementId,
     CommonRestrictions.PROCESS_DEFINITION_KEY to this.bpmnProcessId,
@@ -28,23 +28,36 @@ fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
 
 fun UserTask.toTaskInformation(form: Form?): TaskInformation = TaskInformation(
   taskId = this.userTaskKey.toString(),
-  meta = mapOf(
+  meta = metaOf(
     CommonRestrictions.ACTIVITY_ID to this.elementId,
     CommonRestrictions.PROCESS_DEFINITION_KEY to this.bpmnProcessId,
     CommonRestrictions.PROCESS_DEFINITION_ID to this.processDefinitionKey.toString(),
     CommonRestrictions.PROCESS_INSTANCE_ID to this.processInstanceKey.toString(),
     CommonRestrictions.TENANT_ID to this.tenantId,
     "assignee" to this.assignee,
-    "candidateUsers" to (this.candidateUsers?.joinToString(",") ?: ""),
-    "candidateGroups" to (this.candidateGroups?.joinToString(",") ?: ""),
-    "followUpDate" to (this.followUpDate?.toString() ?: ""),
-    "dueDate" to (this.dueDate?.toString() ?: ""),
+    "candidateUsers" to this.candidateUsers?.joinToString(","),
+    "candidateGroups" to this.candidateGroups?.joinToString(","),
+    "followUpDate" to this.followUpDate?.toString(),
+    "dueDate" to this.dueDate?.toString(),
     "creationDate" to this.creationDate.toString(),
     "processName" to this.processName,
     "taskName" to this.name,
     "formId" to form?.formKey.toString(),
-    "formKey" to (form?.formId ?: ""),
-    "formVersion" to (form?.let { "${it.version}" } ?: ""),
+    "formKey" to form?.formId,
+    "formVersion" to form?.let { "${it.version}" },
     "taskState" to this.state.name,
   )
 )
+
+/**
+ * Creates a map of the provided pairs.
+ *
+ * If the 2nd component of a pair is `null`, the pair is dropped and not added to the resulting map.
+ */
+fun metaOf(vararg pairs: Pair<String, String?>): Map<String, String> =
+  sequenceOf(*pairs)
+    .filter { it.second != null }
+    .associate {
+      @Suppress("UNCHECKED_CAST")
+      it as Pair<String, String>
+    }
