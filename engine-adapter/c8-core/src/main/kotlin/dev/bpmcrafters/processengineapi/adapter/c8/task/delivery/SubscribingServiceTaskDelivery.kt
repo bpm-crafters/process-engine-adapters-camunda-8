@@ -77,10 +77,14 @@ class SubscribingServiceTaskDelivery(
    * Additional restrictions to check.
    * The activated job can be completed by the Subscription strategy and is correct type (topic).
    */
-  private fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean {
+  internal fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean {
     return this.taskType == TaskType.EXTERNAL
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == job.type)
-      && this.restrictions.all {
+      && this.restrictions
+      .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
+        "workerLockDurationInMilliseconds"
+      )
+      .all {
       when (it.key) {
         CommonRestrictions.EXECUTION_ID -> it.value == "${job.elementInstanceKey}"
         CommonRestrictions.ACTIVITY_ID -> it.value == job.elementId
