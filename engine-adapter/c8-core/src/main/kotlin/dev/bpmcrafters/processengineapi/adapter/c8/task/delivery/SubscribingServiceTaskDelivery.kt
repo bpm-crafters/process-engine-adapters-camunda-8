@@ -22,7 +22,8 @@ class SubscribingServiceTaskDelivery(
   private val subscriptionRepository: SubscriptionRepository,
   private val workerId: String,
   private val retryTimeoutInSeconds: Long,
-  private val lockDurationInSeconds: Long
+  private val lockDurationInSeconds: Long,
+  private val jobMatcher: ActivatedJobMatcher = ActivatedJobMatcher()
 ) {
 
   fun subscribe() {
@@ -48,7 +49,7 @@ class SubscribingServiceTaskDelivery(
   }
 
   private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, camundaClient: CamundaClient) {
-    if (activeSubscription.matches(job)) {
+    if (jobMatcher.matches(activeSubscription, job)) {
       subscriptionRepository.activateSubscriptionForTask("${job.key}", activeSubscription)
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
       try {
@@ -71,30 +72,6 @@ class SubscribingServiceTaskDelivery(
       logger.trace { "PROCESS-ENGINE-C8-045: Successfully returned service task ${job.key} not matching subscriptions." }
     }
 
-  }
-
-  /*
-   * Additional restrictions to check.
-   * The activated job can be completed by the Subscription strategy and is correct type (topic).
-   */
-  internal fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean {
-    return this.taskType == TaskType.EXTERNAL
-      && (this.taskDescriptionKey == null || this.taskDescriptionKey == job.type)
-      && this.restrictions
-      .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
-        "workerLockDurationInMilliseconds"
-      )
-      .all {
-      when (it.key) {
-        CommonRestrictions.EXECUTION_ID -> it.value == "${job.elementInstanceKey}"
-        CommonRestrictions.ACTIVITY_ID -> it.value == job.elementId
-        CommonRestrictions.TENANT_ID -> it.value == job.tenantId
-        CommonRestrictions.PROCESS_INSTANCE_ID -> it.value == "${job.processInstanceKey}"
-        CommonRestrictions.PROCESS_DEFINITION_ID -> it.value == "${job.processDefinitionKey}"
-        else -> false
-      }
-    }
-    // job.customHeaders // FIXME: analyze this! user/service task, etc..
   }
 
   private fun JobWorkerBuilderStep3.forSubscription(subscription: TaskSubscriptionHandle): JobWorkerBuilderStep3 {
