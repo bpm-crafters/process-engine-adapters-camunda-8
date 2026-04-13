@@ -90,14 +90,18 @@ class PullUserTaskDelivery(
   private fun TaskSubscriptionHandle.matches(task: UserTask): Boolean =
     this.taskType == TaskType.USER
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == task.elementId)
-      && this.restrictions.all {
-      when (it.key) {
-        CommonRestrictions.TENANT_ID -> it.value == task.tenantId
-        CommonRestrictions.PROCESS_INSTANCE_ID -> it.value == task.processInstanceKey.toString()
-        CommonRestrictions.PROCESS_DEFINITION_ID -> it.value == task.processDefinitionKey.toString()
-        CommonRestrictions.PROCESS_DEFINITION_KEY -> it.value == task.bpmnProcessId
-        // FIXME -> more restrictions
-        else -> false
+      && this.restrictions
+      .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
+        "workerLockDurationInMilliseconds"
+      )
+      .all {
+        when (it.key) {
+          CommonRestrictions.TENANT_ID -> it.value == task.tenantId
+          CommonRestrictions.PROCESS_INSTANCE_ID -> it.value == task.processInstanceKey.toString()
+          CommonRestrictions.PROCESS_DEFINITION_ID -> it.value == task.processDefinitionKey.toString()
+          CommonRestrictions.PROCESS_DEFINITION_KEY -> it.value == task.bpmnProcessId
+          // FIXME -> more restrictions
+          else -> false
+        }
       }
-    }
 }

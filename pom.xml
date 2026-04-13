@@ -11,7 +11,7 @@
 
   <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
   <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
-  <version>2026.02.2</version>
+  <version>2026.04.1</version>
   <name>POM: Camunda 8 Adapter Project root</name>
   <description>Process Engine Adapters Camunda 8</description>
   <url>https://github.com/bpm-crafters/process-engine-adapters-camunda-8/</url>
@@ -24,17 +24,17 @@
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
-    <camunda.version>8.8.14</camunda.version>
+    <camunda.version>8.8.21</camunda.version>
 
     <!-- TEST -->
-    <mockito.version>6.2.3</mockito.version>
+    <mockito.version>6.3.0</mockito.version>
     <assertj.version>3.27.7</assertj.version>
     <junit5.version>5.13.3</junit5.version>
     <jgiven.version>2.0.2</jgiven.version>
     <awaitility.version>4.3.0</awaitility.version>
     <mockk.version>1.14.9</mockk.version>
     <slf4j.verion>2.0.17</slf4j.verion>
-    <testcontainers.version>2.0.3</testcontainers.version>
+    <testcontainers.version>2.0.4</testcontainers.version>
 
   </properties>
 
