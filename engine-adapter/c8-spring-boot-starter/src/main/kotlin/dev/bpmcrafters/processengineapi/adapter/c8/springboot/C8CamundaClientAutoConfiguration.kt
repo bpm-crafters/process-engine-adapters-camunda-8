@@ -12,9 +12,11 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryF
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.modification.C8CamundaClientUserTaskModificationApiImpl
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
 import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
+import dev.bpmcrafters.processengineapi.task.UserTaskModificationApi
 import io.camunda.client.CamundaClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
@@ -118,6 +120,16 @@ class C8CamundaClientAutoConfiguration {
   ): PullUserTaskDelivery =
     PullUserTaskDelivery(
       subscriptionRepository = subscriptionRepository,
+      camundaClient = camundaClient
+    )
+
+  @Bean("c8-user-task-modification")
+  @Qualifier("c8-user-task-modification")
+  @ConditionalOnMissingBean
+  fun userTaskModificationApi(
+    camundaClient: CamundaClient
+  ): UserTaskModificationApi =
+    C8CamundaClientUserTaskModificationApiImpl(
       camundaClient = camundaClient
     )
 
