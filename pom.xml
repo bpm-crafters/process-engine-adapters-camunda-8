@@ -33,7 +33,7 @@
     <jgiven.version>2.0.2</jgiven.version>
     <awaitility.version>4.3.0</awaitility.version>
     <mockk.version>1.14.9</mockk.version>
-    <slf4j.verion>2.0.17</slf4j.verion>
+    <slf4j.verion>2.0.18</slf4j.verion>
     <testcontainers.version>2.0.5</testcontainers.version>
 
   </properties>
