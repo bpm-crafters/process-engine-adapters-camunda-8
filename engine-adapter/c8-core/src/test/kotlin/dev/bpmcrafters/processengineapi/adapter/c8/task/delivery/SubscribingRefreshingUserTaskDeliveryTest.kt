@@ -1,12 +1,25 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
+import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
+import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
+import dev.bpmcrafters.processengineapi.task.TaskSubscription
 import dev.bpmcrafters.processengineapi.task.TaskType
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.command.ActivateJobsCommandStep1
+import io.camunda.client.api.command.ActivateJobsCommandStep1.ActivateJobsCommandStep3
 import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.worker.JobWorker
+import io.camunda.client.api.worker.JobWorkerBuilderStep1
+import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep2
+import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
+import org.mockito.ArgumentMatchers.anyLong
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class SubscribingRefreshingUserTaskDeliveryTest {
@@ -15,7 +28,7 @@ class SubscribingRefreshingUserTaskDeliveryTest {
   // on TaskSubscriptionHandle declared inside SubscribingRefreshingUserTaskDelivery class.
   private val delivery = SubscribingRefreshingUserTaskDelivery(
     camundaClient = mock(),
-    subscriptionRepository = mock(),
+    subscriptionRepository = InMemSubscriptionRepository(),
     workerId = "test-worker",
     userTaskLockTimeoutMs = 60000L
   )
@@ -149,5 +162,48 @@ class SubscribingRefreshingUserTaskDeliveryTest {
     with(delivery) {
       assertThat(subscription.matches(job)).isTrue()
     }
+  }
+
+  @Test
+  fun `should successfully subscribe and unsubscribe when taskDescriptionKey is null`() {
+    val subscriptionRepository = InMemSubscriptionRepository()
+    val camundaClient = mock<CamundaClient>()
+    val workerBuilder = mock<JobWorkerBuilderStep1>()
+    val jobWorker = mock<JobWorker>()
+
+    val subscription = TaskSubscriptionHandle(
+      taskType = TaskType.USER,
+      taskDescriptionKey = null,
+      restrictions = emptyMap(),
+      payloadDescription = null,
+      action = { _, _ -> },
+      termination = { _ -> }
+    )
+
+    subscriptionRepository.createTaskSubscription(subscription)
+
+    whenever(camundaClient.newWorker()).thenReturn(workerBuilder)
+    val workerBuilder2 = mock<JobWorkerBuilderStep2>()
+    whenever(workerBuilder.jobType(any())).thenReturn(workerBuilder2)
+    val workerBuilder3 = mock<JobWorkerBuilderStep3>()
+    whenever(workerBuilder2.handler(any())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.maxJobsActive(any())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.name(any())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.timeout(any<Long>())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.streamEnabled(any())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.fetchVariables(any<List<String>>())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.open()).thenReturn(jobWorker)
+
+    val delivery = SubscribingRefreshingUserTaskDelivery(
+      camundaClient = camundaClient,
+      subscriptionRepository = subscriptionRepository,
+      workerId = "test-worker",
+      userTaskLockTimeoutMs = 60000L
+    )
+
+    delivery.subscribe()
+
+    delivery.unsubscribe(subscription)
+    verify(jobWorker).close()
   }
 }
