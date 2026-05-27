@@ -11,6 +11,8 @@ import dev.bpmcrafters.example.common.application.port.out.UserTaskOutPort;
 import dev.bpmcrafters.example.common.application.port.out.WorkflowOutPort;
 import dev.bpmcrafters.processengineapi.adapter.c8.testing.AbstractC8ProcessStage;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class SimpleProcessStages {
 
@@ -73,6 +75,25 @@ public class SimpleProcessStages {
     public ActionStage user_task_perform_task_is_completed(String value) {
       process_waits_in(Elements.USER_TASK_PERFORM_TASK);
       userTaskOutPort.complete(task().getTaskId(), value);
+      return self();
+    }
+
+    @As("user task variables are verified")
+    public ActionStage user_task_variables_are_verified() {
+      process_waits_in(Elements.USER_TASK_PERFORM_TASK);
+      String taskId = task().getTaskId();
+
+      Map<String, ?> actualVariables = userTaskSupport.getPayload(taskId);
+
+      assertThat(actualVariables).isNotNull();
+      assertThat(actualVariables).containsKey("intValue");
+      assertThat(actualVariables).containsKey("stringValue");
+      assertThat(actualVariables).containsKey("listVariable");
+      assertThat(actualVariables).containsKey("action1");
+      assertThat(actualVariables.get("intValue")).isEqualTo(123);
+      assertThat(actualVariables.get("stringValue")).isEqualTo("test");
+      assertThat(actualVariables.get("listVariable")).isEqualTo(List.of("element1", "element2"));
+      assertThat(actualVariables.get("action1")).isEqualTo("value1");
       return self();
     }
 
