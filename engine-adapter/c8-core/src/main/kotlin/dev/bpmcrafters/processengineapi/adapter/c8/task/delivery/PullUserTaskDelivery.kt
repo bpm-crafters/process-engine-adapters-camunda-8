@@ -1,6 +1,10 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.bpmcrafters.processengineapi.CommonRestrictions
+import dev.bpmcrafters.processengineapi.adapter.c8.task.asJson
+import dev.bpmcrafters.processengineapi.adapter.c8.task.parseJson
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.impl.task.filterBySubscription
@@ -60,9 +64,12 @@ class PullUserTaskDelivery(
                   this.filter { it.name { variable -> variable.`in`(activeSubscription.payloadDescription!!.toList()) } }
                 }
               }
-              val variablesFromTask: Map<String, Any?> = variableRequest.send().join().items().associate { variable ->
+
+              val result = variableRequest.withFullValues().send().join().items()
+
+              val variablesFromTask = result.associate { variable ->
                 variable.name to variable.value
-              }
+              }.asJson().parseJson(jacksonObjectMapper())
 
               val variables = variablesFromTask.filterBySubscription(activeSubscription)
 
