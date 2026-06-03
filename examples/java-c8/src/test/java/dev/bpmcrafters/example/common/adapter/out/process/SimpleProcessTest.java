@@ -55,6 +55,19 @@ public class SimpleProcessTest extends DualScenarioTest<SimpleProcessStages.Acti
   }
 
   @Test
+  public void should_verify_user_task_variables() {
+    given()
+      .simple_process_started("test", 123);
+
+    when()
+      .service_execute_action_is_completed("value1")
+      .and()
+      .process_waits_in(Elements.USER_TASK_PERFORM_TASK)
+      .and()
+      .user_task_variables_are_verified();
+  }
+
+  @Test
   public void should_start_process_and_use_retries_if_service_task_fails() {
     given()
       .simple_process_started("test", 123);

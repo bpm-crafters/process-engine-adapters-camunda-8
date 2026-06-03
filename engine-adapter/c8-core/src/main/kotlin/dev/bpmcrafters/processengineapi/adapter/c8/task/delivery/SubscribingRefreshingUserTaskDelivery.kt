@@ -28,7 +28,7 @@ class SubscribingRefreshingUserTaskDelivery(
   private val userTaskLockTimeoutMs: Long,
 ) : SubscribingUserTaskDelivery, RefreshableDelivery {
 
-  private var jobWorkerRegistry: Map<String, JobWorker> = emptyMap()
+  private var jobWorkerRegistry: Map<TaskSubscription, JobWorker> = emptyMap()
 
   fun subscribe() {
     val subscriptions = subscriptionRepository.getTaskSubscriptions().filter { s -> s.taskType == TaskType.USER }
@@ -50,7 +50,7 @@ class SubscribingRefreshingUserTaskDelivery(
             .open()
 
           // add to registry, to be able to close worker and stop receiving updates on unsubscribe
-          jobWorkerRegistry = jobWorkerRegistry + (activeSubscription.taskDescriptionKey!! to subscribedJobWorker)
+          jobWorkerRegistry = jobWorkerRegistry + (activeSubscription to subscribedJobWorker)
         }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-046: not subscribing for user tasks, no active subscription found." }
@@ -120,10 +120,8 @@ class SubscribingRefreshingUserTaskDelivery(
   }
 
   override fun unsubscribe(taskSubscription: TaskSubscription) {
-    if (taskSubscription is TaskSubscriptionHandle) {
-      logger.debug { "PROCESS-ENGINE-C8-054: Unsubscribe from user task: ${taskSubscription.taskDescriptionKey}" }
-      jobWorkerRegistry[taskSubscription.taskDescriptionKey]?.close()
-    }
+    logger.debug { "PROCESS-ENGINE-C8-054: Unsubscribe from user task: $taskSubscription" }
+    jobWorkerRegistry[taskSubscription]?.close()
   }
 
   fun unsubscribeAll() {
