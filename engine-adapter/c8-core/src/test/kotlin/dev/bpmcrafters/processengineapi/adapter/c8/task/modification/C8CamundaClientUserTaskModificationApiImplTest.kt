@@ -24,6 +24,76 @@ class C8CamundaClientUserTaskModificationApiImplTest {
   private val modificationApi = C8CamundaClientUserTaskModificationApiImpl(camundaClient)
 
   @Test
+  fun `set candidate users updates the user task`() {
+    val candidateUsers = listOf("user1", "user2")
+    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
+    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
+
+    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
+    every { updateCommand.candidateUsers(candidateUsers) } returns updateCommand
+    every { updateCommand.send() } returns future
+
+    modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateUsersTaskCmd(TASK_ID, candidateUsers))
+
+    verify {
+      updateCommand.candidateUsers(candidateUsers)
+      updateCommand.send()
+    }
+  }
+
+  @Test
+  fun `clear candidate users updates the user task`() {
+    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
+    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
+
+    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
+    every { updateCommand.clearCandidateUsers() } returns updateCommand
+    every { updateCommand.send() } returns future
+
+    modificationApi.update(ChangeAssignmentModifyTaskCmd.ClearCandidateUsersTaskCmd(TASK_ID))
+
+    verify {
+      updateCommand.clearCandidateUsers()
+      updateCommand.send()
+    }
+  }
+
+  @Test
+  fun `set candidate groups updates the user task`() {
+    val candidateGroups = listOf("group1", "group2")
+    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
+    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
+
+    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
+    every { updateCommand.candidateUsers(candidateGroups) } returns updateCommand
+    every { updateCommand.send() } returns future
+
+    modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd(TASK_ID, candidateGroups))
+
+    verify {
+      updateCommand.candidateUsers(candidateGroups)
+      updateCommand.send()
+    }
+  }
+
+  @Test
+  fun `clear candidate groups updates the user task`() {
+    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
+    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
+
+    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
+    every { updateCommand.clearCandidateGroups() } returns updateCommand
+    every { updateCommand.send() } returns future
+
+    modificationApi.update(ChangeAssignmentModifyTaskCmd.ClearCandidateGroupsTaskCmd(TASK_ID))
+
+    verify {
+      updateCommand.clearCandidateGroups()
+      updateCommand.send()
+    }
+  }
+
+  @Test
   fun `set due date updates the user task`() {
     val dueDate = OffsetDateTime.parse("2026-04-16T12:34:56+02:00")
     val updateCommand: UpdateUserTaskCommandStep1 = mockk()
@@ -129,7 +199,7 @@ class C8CamundaClientUserTaskModificationApiImplTest {
   }
 
   @Test
-  fun `non date commands are not supported`() {
+  fun `unsupported commands are not supported`() {
     assertThrows(UnsupportedOperationException::class.java) {
       modificationApi.update(ChangeAssignmentModifyTaskCmd.AssignTaskCmd(TASK_ID, "demo"))
     }
