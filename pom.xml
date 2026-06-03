@@ -24,7 +24,7 @@
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
-    <camunda.version>8.9.5</camunda.version>
+    <camunda.version>8.9.6</camunda.version>
 
     <!-- TEST -->
     <mockito.version>6.3.0</mockito.version>
