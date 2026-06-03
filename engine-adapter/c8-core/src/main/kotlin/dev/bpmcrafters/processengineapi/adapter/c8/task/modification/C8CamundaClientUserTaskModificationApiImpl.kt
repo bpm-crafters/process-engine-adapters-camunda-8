@@ -12,6 +12,9 @@ import java.util.concurrent.CompletableFuture
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Implementation of C8 modification API
+ */
 class C8CamundaClientUserTaskModificationApiImpl(
   private val camundaClient: CamundaClient
 ) : UserTaskModificationApi {
