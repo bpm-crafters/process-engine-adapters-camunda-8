@@ -1,10 +1,7 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.modification
 
 import dev.bpmcrafters.processengineapi.Empty
-import dev.bpmcrafters.processengineapi.task.ChangeDatesModifyTaskCmd
-import dev.bpmcrafters.processengineapi.task.CompositeModifyTaskCmd
-import dev.bpmcrafters.processengineapi.task.ModifyTaskCmd
-import dev.bpmcrafters.processengineapi.task.UserTaskModificationApi
+import dev.bpmcrafters.processengineapi.task.*
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.command.UpdateUserTaskCommandStep1
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -13,7 +10,8 @@ import java.util.concurrent.CompletableFuture
 private val logger = KotlinLogging.logger {}
 
 /**
- * Implementation of C8 modification API
+ * Implementation of C8 modification API.
+ * @since 2025-06-01
  */
 class C8CamundaClientUserTaskModificationApiImpl(
   private val camundaClient: CamundaClient
@@ -29,6 +27,11 @@ class C8CamundaClientUserTaskModificationApiImpl(
   private fun apply(cmd: ModifyTaskCmd) {
     when (cmd) {
       is CompositeModifyTaskCmd -> cmd.commands.forEach(::apply)
+
+      is ChangeAssignmentModifyTaskCmd.SetCandidateUsersTaskCmd -> sendUpdate(cmd.taskId) { it.candidateUsers(cmd.candidateUsers) }
+      is ChangeAssignmentModifyTaskCmd.ClearCandidateUsersTaskCmd -> sendUpdate(cmd.taskId) { it.clearCandidateUsers() }
+      is ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd -> sendUpdate(cmd.taskId) { it.candidateGroups(cmd.candidateGroups) }
+      is ChangeAssignmentModifyTaskCmd.ClearCandidateGroupsTaskCmd -> sendUpdate(cmd.taskId) { it.clearCandidateGroups() }
 
       is ChangeDatesModifyTaskCmd.SetDueDateTaskCmd -> sendUpdate(cmd.taskId) { it.dueDate(cmd.dueDate) }
       is ChangeDatesModifyTaskCmd.ClearDueDateTaskCmd -> sendUpdate(cmd.taskId) { it.clearDueDate() }
