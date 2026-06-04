@@ -65,13 +65,13 @@ class C8CamundaClientUserTaskModificationApiImplTest {
     val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
 
     every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.candidateUsers(candidateGroups) } returns updateCommand
+    every { updateCommand.candidateGroups(candidateGroups) } returns updateCommand
     every { updateCommand.send() } returns future
 
     modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd(TASK_ID, candidateGroups))
 
     verify {
-      updateCommand.candidateUsers(candidateGroups)
+      updateCommand.candidateGroups(candidateGroups)
       updateCommand.send()
     }
   }

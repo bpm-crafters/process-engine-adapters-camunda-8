@@ -30,7 +30,7 @@ class C8CamundaClientUserTaskModificationApiImpl(
 
       is ChangeAssignmentModifyTaskCmd.SetCandidateUsersTaskCmd -> sendUpdate(cmd.taskId) { it.candidateUsers(cmd.candidateUsers) }
       is ChangeAssignmentModifyTaskCmd.ClearCandidateUsersTaskCmd -> sendUpdate(cmd.taskId) { it.clearCandidateUsers() }
-      is ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd -> sendUpdate(cmd.taskId) { it.candidateUsers(cmd.candidateGroups) }
+      is ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd -> sendUpdate(cmd.taskId) { it.candidateGroups(cmd.candidateGroups) }
       is ChangeAssignmentModifyTaskCmd.ClearCandidateGroupsTaskCmd -> sendUpdate(cmd.taskId) { it.clearCandidateGroups() }
 
       is ChangeDatesModifyTaskCmd.SetDueDateTaskCmd -> sendUpdate(cmd.taskId) { it.dueDate(cmd.dueDate) }
