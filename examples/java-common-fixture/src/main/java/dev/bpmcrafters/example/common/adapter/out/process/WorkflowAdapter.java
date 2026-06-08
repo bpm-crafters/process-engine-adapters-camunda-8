@@ -1,5 +1,6 @@
 package dev.bpmcrafters.example.common.adapter.out.process;
 
+import dev.bpmcrafters.example.common.adapter.shared.ComplexVariable;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst.Expressions;
 import dev.bpmcrafters.example.common.application.port.out.WorkflowOutPort;
@@ -48,7 +49,10 @@ public class WorkflowAdapter implements WorkflowOutPort {
           () -> Map.of(
             "stringValue", value,
             "intValue", intValue,
-            "listVariable", List.of("element1", "element2")
+            "listVariable", List.of("element1", "element2"),
+            "listIntVariable", List.of(12, 13, 15L),
+            "toBeOrNotToBe", true,
+            "complex", new ComplexVariable("foo", "bar")
           ),
           Map.of()
         )
