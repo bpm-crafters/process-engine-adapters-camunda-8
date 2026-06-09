@@ -64,7 +64,7 @@ class SubscribingRefreshingUserTaskDeliveryTest {
       taskDescriptionKey = "user-task-1",
       restrictions = mapOf(
         CommonRestrictions.ACTIVITY_ID to "user-task-1",
-        "workerLockDurationInMilliseconds" to "5000"
+        CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS to "5000"
       ),
       payloadDescription = null,
       action = { _, _ -> },

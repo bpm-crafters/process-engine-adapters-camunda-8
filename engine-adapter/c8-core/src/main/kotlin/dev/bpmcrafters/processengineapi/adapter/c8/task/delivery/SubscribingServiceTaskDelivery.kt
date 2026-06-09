@@ -82,7 +82,7 @@ class SubscribingServiceTaskDelivery(
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == job.type)
       && this.restrictions
       .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
-        "workerLockDurationInMilliseconds"
+        CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS
       )
       .all {
       when (it.key) {
@@ -113,7 +113,7 @@ class SubscribingServiceTaskDelivery(
   }
 
   private fun getLockDuration(subscription: TaskSubscriptionHandle): Long {
-    val customLockDuration = subscription.restrictions["workerLockDurationInMilliseconds"]
+    val customLockDuration = subscription.restrictions[CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS]
     return customLockDuration?.toLong() ?: (lockDurationInSeconds * 1000)
   }
 }
