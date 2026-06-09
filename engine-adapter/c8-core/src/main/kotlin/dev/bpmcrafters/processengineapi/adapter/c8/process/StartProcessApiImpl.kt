@@ -100,7 +100,7 @@ class StartProcessApiImpl(
   private fun ProcessInstanceEvent.toProcessInformation() = ProcessInformation(
     instanceId = "${this.processInstanceKey}",
     meta = mapOf(
-      "processDefinitionId" to "${this.processDefinitionKey}",
+      CommonRestrictions.PROCESS_DEFINITION_ID to "${this.processDefinitionKey}",
       CommonRestrictions.PROCESS_DEFINITION_KEY to this.bpmnProcessId,
       CommonRestrictions.TENANT_ID to this.tenantId,
     )

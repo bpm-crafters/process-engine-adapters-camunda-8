@@ -137,7 +137,7 @@ class SubscribingRefreshingUserTaskDelivery(
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == job.elementId)
       && this.restrictions
       .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
-        "workerLockDurationInMilliseconds"
+        CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS
       )
       .all {
       when (it.key) {
