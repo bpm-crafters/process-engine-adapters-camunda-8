@@ -1,8 +1,9 @@
-package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
+package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.UserTaskListenerGlobalRegistration
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.CamundaFuture
+import io.camunda.client.api.command.ClientHttpException
 import io.camunda.client.api.command.ClientStatusException
 import io.camunda.client.api.command.CreateGlobalTaskListenerCommandStep1
 import io.camunda.client.api.fetch.GlobalTaskListenerGetRequest
@@ -10,15 +11,16 @@ import io.camunda.client.api.response.GlobalTaskListenerResponse
 import io.camunda.client.api.search.enums.GlobalTaskListenerEventType
 import io.camunda.client.api.search.response.GlobalTaskListener
 import io.grpc.Status
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 
-class UserTaskListenerGlobalRegistrationTest {
+internal class UserTaskListenerGlobalRegistrationTest {
+
+  companion object {
+    const val LISTENER_ID = "process-engine-user-tasks"
+    const val TOPIC = "process-engine-user-tasks"
+  }
 
   private val camundaClient: CamundaClient = mock()
 
@@ -26,7 +28,12 @@ class UserTaskListenerGlobalRegistrationTest {
   fun `should not register global listener when disabled`() {
     val registration = UserTaskListenerGlobalRegistration(
       camundaClient = camundaClient,
-      listenerProperties = listenerProperties(autoRegisterGlobalListener = false)
+      autoRegisterGlobalListener = false,
+      globalListenerId = LISTENER_ID,
+      topic = TOPIC,
+      globalListenerRetries = 3,
+      globalListenerAfterNonGlobal = true,
+      globalListenerPriority = 50
     )
 
     registration.registerIfEnabled()
@@ -45,7 +52,12 @@ class UserTaskListenerGlobalRegistrationTest {
     whenever(getFuture.join()).thenReturn(existingListener)
     val registration = UserTaskListenerGlobalRegistration(
       camundaClient = camundaClient,
-      listenerProperties = listenerProperties()
+      autoRegisterGlobalListener = true,
+      globalListenerId = LISTENER_ID,
+      topic = TOPIC,
+      globalListenerRetries = 3,
+      globalListenerAfterNonGlobal = true,
+      globalListenerPriority = 50
     )
 
     registration.registerIfEnabled()
@@ -64,18 +76,23 @@ class UserTaskListenerGlobalRegistrationTest {
     val createFuture = mock<CamundaFuture<GlobalTaskListenerResponse>>()
     whenever(camundaClient.newGlobalTaskListenerGetRequest(LISTENER_ID)).thenReturn(getRequest)
     whenever(getRequest.send()).thenReturn(getFuture)
-    whenever(getFuture.join()).thenThrow(ClientStatusException(Status.NOT_FOUND.withDescription("missing"), null))
+    whenever(getFuture.join()).thenThrow(ClientHttpException(404, "missing"))
     whenever(camundaClient.newCreateGlobalTaskListenerRequest()).thenReturn(createStep1)
     whenever(createStep1.id(LISTENER_ID)).thenReturn(createStep2)
     whenever(createStep2.type(TOPIC)).thenReturn(createStep3)
     whenever(createStep3.eventTypes(listOf(GlobalTaskListenerEventType.ALL))).thenReturn(createStep4)
     whenever(createStep4.retries(3)).thenReturn(createStep4)
     whenever(createStep4.afterNonGlobal(true)).thenReturn(createStep4)
-    whenever(createStep4.priority(0)).thenReturn(createStep4)
+    whenever(createStep4.priority(50)).thenReturn(createStep4)
     whenever(createStep4.send()).thenReturn(createFuture)
     val registration = UserTaskListenerGlobalRegistration(
       camundaClient = camundaClient,
-      listenerProperties = listenerProperties()
+      autoRegisterGlobalListener = true,
+      globalListenerId = LISTENER_ID,
+      topic = TOPIC,
+      globalListenerRetries = 3,
+      globalListenerAfterNonGlobal = true,
+      globalListenerPriority = 50
     )
 
     registration.registerIfEnabled()
@@ -85,7 +102,7 @@ class UserTaskListenerGlobalRegistrationTest {
     verify(createStep3).eventTypes(listOf(GlobalTaskListenerEventType.ALL))
     verify(createStep4).retries(3)
     verify(createStep4).afterNonGlobal(true)
-    verify(createStep4).priority(0)
+    verify(createStep4).priority(50)
     verify(createStep4).send()
   }
 
@@ -95,13 +112,24 @@ class UserTaskListenerGlobalRegistrationTest {
     val getFuture = mock<CamundaFuture<GlobalTaskListener>>()
     whenever(camundaClient.newGlobalTaskListenerGetRequest(LISTENER_ID)).thenReturn(getRequest)
     whenever(getRequest.send()).thenReturn(getFuture)
-    whenever(getFuture.join()).thenThrow(ClientStatusException(Status.PERMISSION_DENIED.withDescription("denied"), null))
+    whenever(getFuture.join()).thenThrow(
+      ClientStatusException(
+        Status.PERMISSION_DENIED.withDescription("denied"),
+        null
+      )
+    )
     val registration = UserTaskListenerGlobalRegistration(
       camundaClient = camundaClient,
-      listenerProperties = listenerProperties()
+      autoRegisterGlobalListener = true,
+      globalListenerId = LISTENER_ID,
+      topic = TOPIC,
+      globalListenerRetries = 3,
+      globalListenerAfterNonGlobal = true,
+      globalListenerPriority = 50
+
     )
 
-    assertThatThrownBy {
+    Assertions.assertThatThrownBy {
       registration.registerIfEnabled()
     }
       .isInstanceOf(IllegalStateException::class.java)
@@ -119,20 +147,4 @@ class UserTaskListenerGlobalRegistrationTest {
       whenever(it.priority).thenReturn(0)
     }
 
-  private fun listenerProperties(
-    autoRegisterGlobalListener: Boolean = true
-  ): C8AdapterProperties.UserTaskListener =
-    C8AdapterProperties.UserTaskListener(
-      topic = TOPIC,
-      autoRegisterGlobalListener = autoRegisterGlobalListener,
-      globalListenerId = LISTENER_ID,
-      globalListenerRetries = 3,
-      globalListenerAfterNonGlobal = true,
-      globalListenerPriority = 0
-    )
-
-  companion object {
-    const val LISTENER_ID = "process-engine-user-tasks"
-    const val TOPIC = "process-engine-user-tasks"
-  }
 }

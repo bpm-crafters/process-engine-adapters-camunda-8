@@ -1,13 +1,9 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
 
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterAutoConfiguration
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterEnabledCondition
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.*
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnServiceTaskDeliveryStrategy
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnUserTaskDeliveryStrategy
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
@@ -60,7 +56,12 @@ class C8SubscriptionAutoConfiguration {
   ): UserTaskListenerGlobalRegistration =
     UserTaskListenerGlobalRegistration(
       camundaClient = camundaClient,
-      listenerProperties = c8AdapterProperties.userTasks.listener
+      autoRegisterGlobalListener = c8AdapterProperties.userTasks.listener.autoRegisterGlobalListener,
+      globalListenerId = c8AdapterProperties.userTasks.listener.globalListenerId,
+      topic = c8AdapterProperties.userTasks.listener.topic,
+      globalListenerRetries = c8AdapterProperties.userTasks.listener.globalListenerRetries,
+      globalListenerAfterNonGlobal = c8AdapterProperties.userTasks.listener.globalListenerAfterNonGlobal,
+      globalListenerPriority = c8AdapterProperties.userTasks.listener.globalListenerPriority
     )
 
   @Bean("c8-user-task-delivery-subscription")
