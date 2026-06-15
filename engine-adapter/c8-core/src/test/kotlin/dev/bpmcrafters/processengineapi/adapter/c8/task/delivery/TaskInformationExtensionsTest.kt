@@ -1,11 +1,15 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.response.UserTaskProperties
+import io.camunda.client.api.search.enums.JobKind
+import io.camunda.client.api.search.enums.ListenerEventType
 import io.camunda.client.api.search.enums.UserTaskState
 import io.camunda.client.api.search.response.Form
 import io.camunda.client.api.search.response.UserTask
 import io.camunda.zeebe.protocol.Protocol
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.NullSource
 import org.junit.jupiter.params.provider.ValueSource
@@ -81,6 +85,48 @@ class TaskInformationExtensionsTest {
     } else {
       assertThat(taskInformation.meta).containsEntry("dueDate", dueDate.toString())
     }
+  }
+
+  @Test
+  fun `should map user task listener ActivatedJob`() {
+    val userTask = mock<UserTaskProperties> {
+      whenever { it.userTaskKey }.thenReturn(1234L)
+      whenever { it.action }.thenReturn("complete")
+      whenever { it.assignee }.thenReturn("kermit")
+      whenever { it.candidateUsers }.thenReturn(listOf("gonzo", "fozzy"))
+      whenever { it.candidateGroups }.thenReturn(listOf("avengers"))
+      whenever { it.changedAttributes }.thenReturn(listOf("assignee", "priority"))
+      whenever { it.priority }.thenReturn(80)
+    }
+    val activatedJob = mock<ActivatedJob> {
+      whenever { it.kind }.thenReturn(JobKind.TASK_LISTENER)
+      whenever { it.key }.thenReturn(9876L)
+      whenever { it.type }.thenReturn("process-engine-user-tasks")
+      whenever { it.listenerEventType }.thenReturn(ListenerEventType.COMPLETING)
+      whenever { it.userTask }.thenReturn(userTask)
+      whenever { it.tenantId }.thenReturn("tenant-1")
+      whenever { it.elementId }.thenReturn("user-task")
+      whenever { it.elementInstanceKey }.thenReturn(222L)
+      whenever { it.bpmnProcessId }.thenReturn("simple-process")
+      whenever { it.processDefinitionKey }.thenReturn(333L)
+      whenever { it.processInstanceKey }.thenReturn(444L)
+      whenever { it.retries }.thenReturn(3)
+    }
+
+    val event = activatedJob.toUserTaskListenerEvent()
+    val taskInformation = activatedJob.toUserTaskListenerTaskInformation()
+
+    assertThat(event.taskId).isEqualTo("1234")
+    assertThat(event.eventType).isEqualTo(ListenerEventType.COMPLETING)
+    assertThat(taskInformation.taskId).isEqualTo("1234")
+    assertThat(taskInformation.meta).containsEntry("eventType", "COMPLETING")
+    assertThat(taskInformation.meta).containsEntry("action", "complete")
+    assertThat(taskInformation.meta).containsEntry("assignee", "kermit")
+    assertThat(taskInformation.meta).containsEntry("candidateUsers", "gonzo,fozzy")
+    assertThat(taskInformation.meta).containsEntry("candidateGroups", "avengers")
+    assertThat(taskInformation.meta).containsEntry("changedAttributes", "assignee,priority")
+    assertThat(taskInformation.meta).containsEntry("priority", "80")
+    assertThat(taskInformation.meta).containsEntry("topicName", "process-engine-user-tasks")
   }
 
 }

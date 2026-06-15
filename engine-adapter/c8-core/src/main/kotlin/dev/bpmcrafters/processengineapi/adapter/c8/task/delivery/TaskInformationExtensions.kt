@@ -1,10 +1,13 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
+import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.task.TaskInformation
+import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.api.response.ActivatedJob
 import io.camunda.client.api.search.response.Form
 import io.camunda.client.api.search.response.UserTask
+import io.camunda.client.api.search.enums.JobKind
 import io.camunda.zeebe.protocol.Protocol
 
 fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
@@ -48,6 +51,50 @@ fun UserTask.toTaskInformation(form: Form?): TaskInformation = TaskInformation(
     "taskState" to this.state.name,
   )
 )
+
+fun ActivatedJob.toUserTaskListenerEvent(): UserTaskListenerEvent {
+  val userTask = requireNotNull(this.userTask) {
+    "Activated job ${this.key} is not a user task listener job."
+  }
+  val userTaskKey = requireNotNull(userTask.userTaskKey) {
+    "Activated user task listener job ${this.key} does not contain a user task key."
+  }
+  return UserTaskListenerEvent(
+    taskId = userTaskKey.toString(),
+    eventType = this.listenerEventType
+  )
+}
+
+fun ActivatedJob.toUserTaskListenerTaskInformation(): TaskInformation {
+  val userTask = requireNotNull(this.userTask) {
+    "Activated job ${this.key} is not a user task listener job."
+  }
+  return TaskInformation(
+    taskId = requireNotNull(userTask.userTaskKey) {
+      "Activated user task listener job ${this.key} does not contain a user task key."
+    }.toString(),
+    meta = metaOf(
+      CommonRestrictions.TENANT_ID to this.tenantId,
+      CommonRestrictions.ACTIVITY_ID to this.elementId,
+      CommonRestrictions.EXECUTION_ID to "${this.elementInstanceKey}",
+      CommonRestrictions.PROCESS_DEFINITION_KEY to this.bpmnProcessId,
+      CommonRestrictions.PROCESS_DEFINITION_ID to "${this.processDefinitionKey}",
+      CommonRestrictions.PROCESS_INSTANCE_ID to "${this.processInstanceKey}",
+      "eventType" to this.listenerEventType.name,
+      "action" to userTask.action,
+      "assignee" to userTask.assignee,
+      "candidateUsers" to userTask.candidateUsers?.joinToString(","),
+      "candidateGroups" to userTask.candidateGroups?.joinToString(","),
+      "changedAttributes" to userTask.changedAttributes?.joinToString(","),
+      "dueDate" to userTask.dueDate?.toString(),
+      "followUpDate" to userTask.followUpDate?.toString(),
+      "formKey" to userTask.formKey?.toString(),
+      "priority" to userTask.priority?.toString(),
+      "topicName" to this.type,
+      TaskInformation.RETRIES to this.retries.toString(),
+    )
+  )
+}
 
 /**
  * Creates a map of the provided pairs.

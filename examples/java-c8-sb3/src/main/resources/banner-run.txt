@@ -1,6 +1,6 @@
 ===============================================================================
 
-C8 Example Application (Self Managed)
+C8 Example Application (Camunda Run)
 
   Open API: http://localhost:${server.port}/swagger-ui/index.html
 

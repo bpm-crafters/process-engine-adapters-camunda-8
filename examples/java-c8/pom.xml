@@ -12,6 +12,18 @@
   <artifactId>process-engine-api-example-java-c8</artifactId>
   <name>Example: Java C8</name>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>dev.bpm-crafters.process-engine-examples</groupId>

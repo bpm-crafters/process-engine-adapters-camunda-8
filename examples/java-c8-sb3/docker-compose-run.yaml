@@ -1,0 +1,44 @@
+services:
+  camunda-run:
+    image: camunda/camunda:8.9.8
+    container_name: java-c8-sb3-camunda-run
+    depends_on:
+      - camunda-postgres
+    ports:
+      - "26500:26500"
+      - "8088:8080"
+      - "9600:9600"
+    environment:
+      - CAMUNDA_DATA_SECONDARY_STORAGE_TYPE=rdbms
+      - CAMUNDA_DATA_SECONDARY_STORAGE_RDBMS_DATABASEVENDORID=postgresql
+      - CAMUNDA_DATA_SECONDARY_STORAGE_RDBMS_URL=jdbc:postgresql://java-c8-sb3-camunda-postgres:5432/camunda_secondary
+      - CAMUNDA_DATA_SECONDARY_STORAGE_RDBMS_USERNAME=camunda
+      - CAMUNDA_DATA_SECONDARY_STORAGE_RDBMS_PASSWORD=camunda
+      - CAMUNDA_SECURITY_AUTHENTICATION_METHOD=BASIC
+      - CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI=TRUE
+      - CAMUNDA_SECURITY_INITIALIZATION_USERS_0_USERNAME=demo
+      - CAMUNDA_SECURITY_INITIALIZATION_USERS_0_PASSWORD=demo
+      - CAMUNDA_SECURITY_INITIALIZATION_USERS_0_NAME=demo
+      - CAMUNDA_SECURITY_INITIALIZATION_USERS_0_EMAIL=demos@bpm-crafter.dev
+      - CAMUNDA_SECURITY_INITIALIZATION_DEFAULTROLES_ADMIN_USERS_0=demo
+# We use auto-registration feature instead.
+#      - CAMUNDA_CLUSTER_GLOBAL_LISTENERS_USER_TASK_0_ID=process-engine-task-listener
+#      - CAMUNDA_CLUSTER_GLOBAL_LISTENERS_USER_TASK_0_TYPE=process-engine-user-tasks
+#      - CAMUNDA_CLUSTER_GLOBAL_LISTENERS_USER_TASK_0_EVENT_TYPES_0=all
+#      - CAMUNDA_CLUSTER_GLOBAL_LISTENERS_USER_TASK_0_RETRIES=3
+#      - CAMUNDA_CLUSTER_GLOBAL_LISTENERS_USER_TASK_0_PRIORITY=50
+
+  camunda-postgres: # https://hub.docker.com/_/postgres
+    container_name: java-c8-sb3-camunda-postgres
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=camunda_secondary
+      - POSTGRES_USER=camunda
+      - POSTGRES_PASSWORD=camunda
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5

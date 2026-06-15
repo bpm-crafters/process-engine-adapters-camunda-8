@@ -2,18 +2,20 @@ package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
 
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterAutoConfiguration
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterEnabledCondition
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnServiceTaskDeliveryStrategy
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnUserTaskDeliveryStrategy
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
+import io.camunda.client.CamundaClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 
@@ -47,6 +49,30 @@ class C8SubscriptionAutoConfiguration {
   ): SubscribingUserTaskDeliveryBinding {
     return SubscribingUserTaskDeliveryBinding(
       subscribingRefreshingUserTaskDelivery = subscribingRefreshingUserTaskDelivery
+    )
+  }
+
+  @Bean
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun userTaskListenerGlobalRegistration(
+    camundaClient: CamundaClient,
+    c8AdapterProperties: C8AdapterProperties,
+  ): UserTaskListenerGlobalRegistration =
+    UserTaskListenerGlobalRegistration(
+      camundaClient = camundaClient,
+      listenerProperties = c8AdapterProperties.userTasks.listener
+    )
+
+  @Bean("c8-user-task-delivery-subscription")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun userTaskListenerDeliveryBinding(
+    @Qualifier("c8-user-task-delivery")
+    userTaskListenerDelivery: UserTaskListenerDelivery,
+    userTaskListenerGlobalRegistration: UserTaskListenerGlobalRegistration,
+  ): UserTaskListenerDeliveryBinding {
+    return UserTaskListenerDeliveryBinding(
+      userTaskListenerDelivery = userTaskListenerDelivery,
+      userTaskListenerGlobalRegistration = userTaskListenerGlobalRegistration
     )
   }
 }
