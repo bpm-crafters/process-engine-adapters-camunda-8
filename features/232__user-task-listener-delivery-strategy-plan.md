@@ -1,81 +1,100 @@
-# User Task Listener Delivery Strategy Plan
+# User Task Listener Delivery Strategy
 
 ## Context
 
-The current native Camunda user task delivery strategy is pull-based. `PullUserTaskDelivery` searches for user tasks in `UserTaskState.CREATED`, delivers matching tasks to the local `SubscriptionRepository`, and marks already delivered tasks as updates. This breaks down when a task disappears outside this adapter, for example when it is completed through Tasklist, completed through another client, canceled by process termination, or interrupted by BPMN flow. Those removals are not visible in the next `CREATED` search result, so the local delivered-task state can become stale.
+The original native Camunda user task delivery strategy is pull-based. `PullUserTaskDelivery` searches for user tasks in
+`UserTaskState.CREATED`, delivers matching tasks to the local `SubscriptionRepository`, and marks tasks that were already
+delivered as updates. This works for visible `CREATED` tasks but cannot observe removals. If a user task is completed
+through Tasklist, completed by another client, canceled by process termination, or interrupted by BPMN flow, it disappears
+from the next search result and the local delivered-task state can become stale.
 
-Camunda user task listeners are a better fit for this regression because they publish blocking job-worker jobs for user task lifecycle events. The listener worker can observe `creating`, `assigning`, `updating`, `completing`, and `canceling` events and update the Process Engine API subscription state from those events.
+Camunda user task listeners expose user task lifecycle changes as blocking job-worker jobs. The adapter now provides an
+opt-in listener-based user task delivery strategy that consumes those jobs and keeps Process Engine API subscription state
+aligned with listener events instead of relying on periodic `CREATED` polling.
 
-The listener job topic/type for this adapter must be:
+The default listener job type consumed by this adapter is:
 
 ```text
 process-engine-user-tasks
 ```
 
-Camunda calls this value the listener `type` or job type. This plan treats it as the task topic.
+The value is configurable through Spring Boot properties and is used as both the listener `type` in Camunda and the worker
+job type in the adapter.
 
-## Target Outcome
+## Feature Outcome
 
-- Add a worker that handles Camunda user task listener jobs for `process-engine-user-tasks`.
-- Add a new native user task delivery strategy based on this worker.
-- Preserve existing Process Engine API subscription semantics: matching by task type, task description key, restrictions, payload description, action callback, and termination callback.
-- Stop relying on periodic `CREATED` polling as the source of truth for task removals.
-- Keep the existing `SCHEDULED` and `SUBSCRIPTION_REFRESHING` strategies available while introducing the listener strategy as an explicit opt-in.
+- `LISTENER` is available as a built-in `C8AdapterProperties.UserTaskDeliveryStrategy`.
+- `ListenerUserTaskDelivery` opens a Camunda job worker for user task listener jobs and implements
+  `SubscribingUserTaskDelivery`.
+- Native user task completion remains wired through `C8CamundaClientUserTaskCompletionApiImpl` when `LISTENER` is active.
+- Existing `SCHEDULED` and `SUBSCRIPTION_REFRESHING` strategies remain available and keep their previous bean graphs.
+- Optional global user task listener auto-registration is available and disabled by default.
+- Listener delivery preserves existing Process Engine API task subscription semantics: task type, task description key,
+  restrictions, payload description filtering, action callback, termination callback, and active delivered-task tracking.
 
 ## Version Guard
 
-- Camunda 8.8 documents BPMN-level user task listeners.
-- The current project uses `camunda.version` 8.9.6, and the local 8.9.6 Java client exposes global task listener APIs such as `newCreateGlobalTaskListenerRequest`.
-- The local 8.8.21 Java client sources do not expose global task listener APIs. If this feature must support 8.8.x, use BPMN-level listener definitions there and guard any global listener auto-registration behind an 8.9+ capability check.
+- The root build currently uses `camunda.version` `8.9.9`, where the Java client exposes global task listener APIs such as
+  `newCreateGlobalTaskListenerRequest` and `newGlobalTaskListenerGetRequest`.
+- Camunda 8.8 documents BPMN-level user task listeners, but the local 8.8.x Java client sources did not expose the global
+  listener APIs used by auto-registration.
+- For Camunda 8.8 compatibility, define BPMN-level listeners on each native user task instead of enabling global listener
+  auto-registration.
 
-## Design
+## Core Implementation
 
-### New Core Types
+The listener implementation is intentionally folded into a small set of files:
 
-Add these classes under `engine-adapter/c8-core/src/main/kotlin/dev/bpmcrafters/processengineapi/adapter/c8/task/delivery`:
+- `ListenerUserTaskDelivery.kt`
+  - `ListenerUserTaskDelivery`: subscribes, unsubscribes, consumes activated listener jobs, completes or fails listener
+    jobs, and updates the `SubscriptionRepository`.
+  - Nested `UserTaskListenerJobWorker`: owns the Camunda `JobWorker` lifecycle for the configured listener topic.
+  - Member extension `TaskSubscriptionHandle.matches(job: ActivatedJob)`: matches listener jobs against task
+    subscriptions.
+- `TaskInformationExtensions.kt`
+  - `ActivatedJob.toUserTaskListenerEvent()`: returns the listener task id and `ListenerEventType`.
+  - `ActivatedJob.toUserTaskListenerTaskInformation()`: creates `TaskInformation` metadata for listener jobs.
+- `GlobalUserTaskListenerRegistrationHelper.kt`
+  - Checks whether global listener auto-registration is enabled.
+  - Reads an existing global listener by id.
+  - Creates a global listener when it is absent.
+  - Leaves existing listeners unchanged when their configuration differs.
 
-- `UserTaskListenerJobWorker`: owns Camunda `JobWorker` lifecycle for topic `process-engine-user-tasks`.
-- `UserTaskListenerDelivery`: implements the Process Engine API delivery behavior on top of listener events and implements `SubscribingUserTaskDelivery`.
-- `UserTaskListenerEvent`: internal immutable event model created from `ActivatedJob`.
+There is no standalone `UserTaskListenerEvent` class and no separate top-level `UserTaskListenerJobWorker` file. Those
+concepts are represented by `toUserTaskListenerEvent()` and the nested worker class to keep the listener delivery path
+local and readable.
 
-Add mapping helpers in `TaskInformationExtensions.kt` or a sibling file:
+## Worker Setup
 
-- `ActivatedJob.toUserTaskListenerEvent()`
-- `ActivatedJob.toUserTaskListenerTaskInformation()`
-- `TaskSubscriptionHandle.matchesUserTaskListener(job: ActivatedJob)`
-
-### Listener Job Handling
-
-The worker should open one listener job worker:
+`ListenerUserTaskDelivery.subscribe()` closes any existing listener worker and opens a new worker with the current
+configuration:
 
 ```kotlin
 camundaClient
   .newWorker()
-  .jobType("process-engine-user-tasks")
-  .handler { _, job -> handle(job) }
+  .jobType(topic)
+  .handler { _, job -> handler(job) }
   .name(workerId)
-  .streamEnabled(true)
   .maxJobsActive(maxJobsActive)
+  .streamEnabled(streamEnabled)
+  .timeout(lockTimeInSeconds * 1000)
+  .apply {
+    if (fetchVariables != null) {
+      fetchVariables(fetchVariables)
+    }
+  }
   .open()
 ```
 
-Use the 8.9.6 client fields that are available on `ActivatedJob`:
+`fetchVariables(...)` is applied only when the adapter can compute a bounded variable projection from registered user task
+subscriptions. If any registered user task subscription has `payloadDescription == null`, the worker fetches all
+variables. Otherwise it fetches the sorted union of all declared payload variable names. Each delivery still filters
+`job.variablesAsMap` with `filterBySubscription(activeSubscription)` before invoking the subscriber action.
 
-- `job.kind == JobKind.TASK_LISTENER`
-- `job.listenerEventType`
-- `job.userTask.userTaskKey`
-- `job.userTask.action`
-- `job.userTask.assignee`
-- `job.userTask.candidateUsers`
-- `job.userTask.candidateGroups`
-- `job.userTask.changedAttributes`
-- `job.userTask.dueDate`
-- `job.userTask.followUpDate`
-- `job.userTask.formKey`
-- `job.userTask.priority`
-- existing job metadata: `elementId`, `elementInstanceKey`, `processInstanceKey`, `processDefinitionKey`, `bpmnProcessId`, `tenantId`, `variablesAsMap`
+The variable projection is calculated when the listener worker opens. If subscriptions are changed later and require a
+wider variable set, the worker must be reopened to widen the fetch projection.
 
-Complete listener jobs without variables:
+Listener jobs are completed without variables:
 
 ```kotlin
 camundaClient
@@ -84,81 +103,123 @@ camundaClient
   .join()
 ```
 
-Do not use `variables(...)` when completing listener jobs. Camunda documents listener job completion with variables as unsupported.
+The implementation does not call `variables(...)` for listener job completion.
 
-### Event Semantics
+## Event Semantics
 
-Map listener events to Process Engine API delivery state like this:
+`ListenerUserTaskDelivery.consumeActivatedJob(job)` handles only jobs where:
 
-- `CREATING`: deliver `TaskInformation.CREATE`, activate the matching subscription for `userTaskKey`.
-- `ASSIGNING`: deliver `TaskInformation.UPDATE` if the task is already active locally; otherwise deliver `CREATE` to recover from missed startup events.
-- `UPDATING`: deliver `TaskInformation.UPDATE` if the task is already active locally; otherwise deliver `CREATE`.
-- `COMPLETING`: complete the listener job successfully, then deactivate the active subscription and call `termination` with `TaskInformation.COMPLETE`.
-- `CANCELING`: complete the listener job successfully, then deactivate the active subscription and call `termination` with `TaskInformation.DELETE`.
+- `job.kind == JobKind.TASK_LISTENER`
+- `job.userTask != null`
 
-The adapter listener should never deny lifecycle transitions and should not apply corrections. It is a delivery observer, not a business validation listener.
+Non-listener jobs and listener jobs without user task data are logged and completed without delivery.
 
-### Listener Ordering
+Supported listener events are mapped to Process Engine API reasons as follows:
 
-User task listeners are blocking. A `COMPLETING` listener fires before the completion lifecycle transition is finalized. If another listener runs after the adapter listener and denies completion, the adapter may remove the task too early.
+| Camunda event | Local task already active | Process Engine API reason | Repository behavior |
+|---------------|---------------------------|---------------------------|---------------------|
+| `CREATING` | Any state | `TaskInformation.CREATE` | Deliver action, then activate task id for the matching subscription. |
+| `ASSIGNING` | No | `TaskInformation.CREATE` | Recover as a create delivery, then activate task id. |
+| `ASSIGNING` | Yes | `TaskInformation.ASSIGN` | Deliver action and keep the task active. |
+| `UPDATING` | No | `TaskInformation.CREATE` | Recover as a create delivery, then activate task id. |
+| `UPDATING` | Yes | `TaskInformation.UPDATE` | Deliver action and keep the task active. |
+| `COMPLETING` | Yes | `TaskInformation.COMPLETE` | Complete listener job, deactivate task id, then invoke termination callback. |
+| `COMPLETING` | No | None | Complete listener job without a local termination callback. |
+| `CANCELING` | Yes | `TaskInformation.DELETE` | Complete listener job, deactivate task id, then invoke termination callback. |
+| `CANCELING` | No | None | Complete listener job without a local termination callback. |
 
-Mitigation:
+Unsupported listener event values are logged and completed without delivery.
 
-- For global listener registration, set `afterNonGlobal = true` and `priority = 0`.
-- Document that `process-engine-user-tasks` should be the last listener for `completing` when using BPMN-level listeners.
-- If a project uses other global after-non-global listeners that may deny completion, that project must order them before this adapter listener or accept the early-removal risk.
+The adapter listener is an observer of lifecycle changes. It does not deny lifecycle transitions and does not apply
+corrections to the user task.
 
-### Failure Policy
+## Failure Policy
 
-Use reliable delivery as the first implementation:
+Delivery for `CREATING`, `ASSIGNING`, and `UPDATING` is reliable and blocking:
 
-- If mapping fails or the subscriber action throws for `CREATING`, `ASSIGNING`, or `UPDATING`, fail the listener job with decremented retries and a retry backoff. This keeps event delivery at-least-once, but it can block the user task lifecycle and eventually create an incident.
-- If the termination callback throws for `COMPLETING` or `CANCELING`, log the error after the listener job is completed. The engine lifecycle should not be blocked after the task is already leaving active state.
-- Add a follow-up option only if needed: `fail-on-delivery-error: false` for observer mode, where the listener job is always completed and delivery errors are only logged.
+- Subscriber action success activates the task for the matching subscription and completes the listener job.
+- Subscriber action failure fails the listener job with:
+  - `retries((job.retries - 1).coerceAtLeast(0))`
+  - `retryBackoff(Duration.ofSeconds(retryTimeoutInSeconds))`
+  - `errorMessage(...)`
 
-### Payload Handling
+Termination for `COMPLETING` and `CANCELING` does not block the engine lifecycle after the adapter has completed the
+listener job. The listener job is completed first. If the termination callback throws, the exception is logged and the task
+remains deactivated locally.
 
-Use `job.variablesAsMap` for the initial implementation and filter it with `filterBySubscription(activeSubscription)`.
+## Task Information Metadata
 
-When opening the worker:
+Listener jobs are mapped to `TaskInformation` with the user task key as `taskId`.
 
-- If all active user task subscriptions have bounded `payloadDescription` values, fetch the union of those variable names.
-- If any active subscription has `payloadDescription == null`, do not restrict fetched variables.
-- If a subscription has `payloadDescription == emptySet()`, deliver an empty payload to that subscription after filtering.
+The listener mapping includes these metadata entries when the corresponding source value is present:
 
-This preserves current subscription behavior while avoiding a variable search request per event.
+- Common restriction metadata:
+  - `tenantId`
+  - `activityId`
+  - `executionId`
+  - `processDefinitionKey`
+  - `processDefinitionId`
+  - `processInstanceId`
+- Listener metadata:
+  - `eventType`
+  - `action`
+  - `assignee`
+  - `candidateUsers`
+  - `candidateGroups`
+  - `changedAttributes`
+  - `dueDate`
+  - `followUpDate`
+  - `formKey`
+  - `priority`
+  - `topicName`
+  - `retries`
+  - `reason`
 
-### Subscription Matching
+Collection values such as candidate users, candidate groups, and changed attributes are serialized as comma-separated
+strings to match the adapter's existing `TaskInformation` metadata style.
 
-Match listener jobs to subscriptions using the existing pattern:
+## Subscription Matching
+
+Listener jobs are matched against the first task subscription that satisfies all of these conditions:
 
 - `taskType == TaskType.USER`
 - `taskDescriptionKey == null || taskDescriptionKey == job.elementId`
-- restrictions:
-  - `CommonRestrictions.ACTIVITY_ID` -> `job.elementId`
-  - `CommonRestrictions.EXECUTION_ID` -> `job.elementInstanceKey`
-  - `CommonRestrictions.TENANT_ID` -> `job.tenantId`
-  - `CommonRestrictions.PROCESS_INSTANCE_ID` -> `job.processInstanceKey`
-  - `CommonRestrictions.PROCESS_DEFINITION_ID` -> `job.processDefinitionKey`
-  - `CommonRestrictions.PROCESS_DEFINITION_KEY` -> `job.bpmnProcessId`
-- ignore `CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS` for listener matching.
+- `job.kind == JobKind.TASK_LISTENER`
+- `job.userTask != null`
+- all supported restrictions match
 
-Preserve current behavior by delivering a listener event to the first matching user task subscription.
+Supported listener matching restrictions are:
+
+| Restriction | Listener job source |
+|-------------|---------------------|
+| `CommonRestrictions.ACTIVITY_ID` | `job.elementId` |
+| `CommonRestrictions.EXECUTION_ID` | `job.elementInstanceKey` |
+| `CommonRestrictions.TENANT_ID` | `job.tenantId` |
+| `CommonRestrictions.PROCESS_INSTANCE_ID` | `job.processInstanceKey` |
+| `CommonRestrictions.PROCESS_DEFINITION_ID` | `job.processDefinitionKey` |
+| `CommonRestrictions.PROCESS_DEFINITION_KEY` | `job.bpmnProcessId` |
+
+`CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS` is ignored during listener matching. Any other restriction key
+causes the subscription not to match.
+
+`unsubscribe(taskSubscription)` removes active delivered user task ids currently associated with that subscription from
+the local `SubscriptionRepository`.
 
 ## Spring Boot Configuration
 
-Extend `C8AdapterProperties.UserTaskDeliveryStrategy`:
+The listener strategy is selected with:
 
-```kotlin
-enum class UserTaskDeliveryStrategy {
-  SCHEDULED,
-  SUBSCRIPTION_REFRESHING,
-  LISTENER,
-  CUSTOM
-}
+```yaml
+dev:
+  bpm-crafters:
+    process-api:
+      adapter:
+        c8:
+          user-tasks:
+            delivery-strategy: LISTENER
 ```
 
-Extend `C8AdapterProperties.UserTasks` with listener-specific properties:
+Listener-specific properties live under `user-tasks.listener`:
 
 ```yaml
 dev:
@@ -177,29 +238,52 @@ dev:
               retry-timeout-in-seconds: 5
               auto-register-global-listener: false
               global-listener-id: process-engine-user-tasks
+              global-listener-retries: 3
+              global-listener-after-non-global: true
+              global-listener-priority: 0
 ```
 
-Wire `LISTENER` in `C8CamundaClientAutoConfiguration`:
+When `LISTENER` is active:
 
-- create `UserTaskListenerDelivery` as bean `c8-user-task-delivery`.
-- use `C8CamundaClientUserTaskCompletionApiImpl` for user task completion, because this strategy targets native Camunda user tasks.
-- do not use `C8CamundaClientUserTaskJobCompletionApiImpl`; that class is for job-based user tasks.
+- `C8CamundaClientAutoConfiguration` creates `ListenerUserTaskDelivery` as bean `c8-user-task-delivery`.
+- `C8CamundaClientAutoConfiguration` creates `C8CamundaClientUserTaskCompletionApiImpl` as bean
+  `c8-user-task-completion`.
+- `C8SubscriptionAutoConfiguration` creates `GlobalUserTaskListenerRegistrationHelper`.
+- `C8SubscriptionAutoConfiguration` creates `UserTaskListenerDeliveryBinding` as bean
+  `c8-user-task-delivery-subscription`.
+- `UserTaskListenerDeliveryBinding` reacts to `ApplicationStartedEvent`, registers the global listener when enabled, and
+  then subscribes to listener jobs.
 
-Wire startup in `C8SubscriptionAutoConfiguration`:
+There is no scheduled binding for `LISTENER`. `SCHEDULED` remains the pull-based native user task strategy, and
+`SUBSCRIPTION_REFRESHING` remains the Zeebe-job-based user task strategy with job completion.
 
-- add a listener-specific binding, for example `UserTaskListenerDeliveryBinding`.
-- on `ApplicationStartedEvent`, call `userTaskListenerDelivery.subscribe()` or `open()`.
-- on shutdown, close the underlying `JobWorker`.
+## Listener Registration
 
-No scheduled binding is needed for this strategy.
+### Global Listener Auto-Registration
 
-## Listener Registration Options
+Auto-registration is opt-in:
 
-### Preferred For Camunda 8.9+
+```yaml
+dev:
+  bpm-crafters:
+    process-api:
+      adapter:
+        c8:
+          user-tasks:
+            listener:
+              auto-register-global-listener: true
+```
 
-Use global task listener registration so BPMN models do not need modification.
+When enabled, `GlobalUserTaskListenerRegistrationHelper`:
 
-Static cluster configuration:
+1. Looks up the configured listener id with `newGlobalTaskListenerGetRequest(globalListenerId)`.
+2. Creates the listener with `newCreateGlobalTaskListenerRequest()` when the lookup returns 404.
+3. Uses event type `GlobalTaskListenerEventType.ALL`.
+4. Applies the configured listener type, retries, `afterNonGlobal`, and priority.
+5. Leaves an existing listener unchanged when it has different configuration.
+6. Throws an `IllegalStateException` when lookup or creation fails for authorization or other non-404 errors.
+
+Static Camunda cluster configuration is still valid when auto-registration is disabled:
 
 ```yaml
 camunda:
@@ -214,26 +298,10 @@ camunda:
           priority: 0
 ```
 
-Optional auto-registration can be added after the worker is stable:
+### BPMN-Level Listener Fallback
 
-```kotlin
-camundaClient
-  .newCreateGlobalTaskListenerRequest()
-  .id("process-engine-user-tasks")
-  .type("process-engine-user-tasks")
-  .eventTypes(GlobalTaskListenerEventType.ALL)
-  .afterNonGlobal()
-  .priority(0)
-  .retries(3)
-  .send()
-  .join()
-```
-
-Make auto-registration opt-in. It changes cluster state and needs Orchestration Cluster API permissions.
-
-### Camunda 8.8 Compatible Fallback
-
-Use BPMN-level listeners on every native Camunda user task:
+For Camunda 8.8 compatibility or clusters where global listeners are not desired, define BPMN-level listeners on every
+native Camunda user task:
 
 ```xml
 <zeebe:taskListeners>
@@ -245,134 +313,63 @@ Use BPMN-level listeners on every native Camunda user task:
 </zeebe:taskListeners>
 ```
 
-Place these listeners after any business validation/correction listeners for the same event.
+Place the adapter listener after business validation or correction listeners for the same event.
 
-## Implementation Milestones
+## Listener Ordering
 
-### 1. Worker Spike
+User task listeners are blocking. A `COMPLETING` listener fires before the completion lifecycle transition is finalized.
+If another listener runs after the adapter listener and denies completion, the adapter can remove the task from its local
+state too early.
 
-- Add a minimal `UserTaskListenerJobWorker` that opens a worker for `process-engine-user-tasks`.
-- Validate that jobs with `JobKind.TASK_LISTENER` expose `listenerEventType` and `userTask`.
-- Complete listener jobs without variables.
-- Add unit tests with mocked `CamundaClient`, worker builder, and `ActivatedJob`.
+Mitigation:
 
-Exit criteria:
+- Configure global listeners with `afterNonGlobal = true`.
+- Order any global after-non-global listeners that can deny completion before this adapter listener.
+- When using BPMN-level listeners, place `process-engine-user-tasks` after validation and correction listeners for the
+  same event.
 
-- A listener job can be consumed and completed.
-- Non-task-listener jobs are ignored or failed explicitly with a clear log message.
+## Tests
 
-### 2. Event Mapping
+Current coverage includes:
 
-- Add `UserTaskListenerEvent` and mapping helpers.
-- Add listener task metadata to `TaskInformation`, including:
-  - `eventType`
-  - `action`
-  - `assignee`
-  - `candidateUsers`
-  - `candidateGroups`
-  - `changedAttributes`
-  - `dueDate`
-  - `followUpDate`
-  - `formKey`
-  - `priority`
-  - `topicName`
-  - process and tenant restrictions already used elsewhere.
-- Add unit tests for complete metadata mapping and null handling.
+- `ListenerUserTaskDeliveryTest`
+  - worker opening and fetch-variable projection
+  - create delivery and activation
+  - assignment delivery
+  - update delivery
+  - late assignment or update recovery as create
+  - completion and cancellation termination
+  - subscriber failure retry/fail behavior
+  - no matching subscription behavior
+  - listener restriction matching
+  - non-listener job matching rejection
+- `TaskInformationExtensionsTest`
+  - listener job event extraction
+  - listener `TaskInformation` metadata mapping
+- `GlobalUserTaskListenerRegistrationHelperTest`
+  - disabled auto-registration
+  - existing listener handling
+  - absent listener creation
+  - registration failure surfacing
+- `C8UserTaskDeliveryStrategyAutoConfigurationTest`
+  - `LISTENER` bean graph
+  - unchanged `SCHEDULED` bean graph
+  - unchanged `SUBSCRIPTION_REFRESHING` bean graph
 
-Exit criteria:
+No code in this feature requires `PullUserTaskDelivery.refresh()` for new listener events.
 
-- Mapping covers all listener user task properties exposed by the 8.9.6 Java client.
-- No listener completion command carries variables.
+## Known Constraints
 
-### 3. Delivery Strategy
-
-- Add `UserTaskListenerDelivery`.
-- Reuse `SubscriptionRepository` for active task tracking.
-- Implement subscription matching for listener jobs.
-- Implement event-to-reason behavior for create, update, complete, and delete.
-- Implement `unsubscribe(taskSubscription)` by removing active delivered tasks for that subscription if the repository API permits it; otherwise document the repository limitation and keep unsubscribe equivalent to existing behavior.
-- Add unit tests for:
-  - create delivery and activation.
-  - update delivery.
-  - late update recovering as create.
-  - complete termination and deactivation.
-  - cancel termination and deactivation.
-  - no matching subscription.
-  - subscriber failure retry/fail behavior.
-
-Exit criteria:
-
-- No periodic `PullUserTaskDelivery.refresh()` is required for new listener events.
-- Completed and canceled tasks are removed from local active-delivery state.
-
-### 4. Spring Boot Integration
-
-- Add `LISTENER` to `UserTaskDeliveryStrategy`.
-- Add listener properties with defaults.
-- Create listener delivery and native completion beans under `LISTENER`.
-- Add `UserTaskListenerDeliveryBinding` to start/stop the worker.
-- Ensure `SCHEDULED` and `SUBSCRIPTION_REFRESHING` remain unchanged.
-- Add configuration tests for:
-  - `LISTENER` creates listener delivery and native user task completion.
-  - `SCHEDULED` still creates pull delivery.
-  - `SUBSCRIPTION_REFRESHING` still creates job-based user task delivery and completion.
-
-Exit criteria:
-
-- Applications can enable the strategy with `delivery-strategy: LISTENER`.
-- Existing strategies retain their current bean graph.
-
-### 5. Listener Registration Support
-
-- Document BPMN-level listener XML for Camunda 8.8 compatibility.
-- Document global listener configuration for Camunda 8.9+.
-- Add optional global auto-registration only after the manual/global configuration path is tested.
-- If auto-registration is implemented:
-  - search/get existing listener by id first.
-  - create it if absent.
-  - update only when explicitly configured to do so.
-  - surface authorization failures clearly at startup.
-
-Exit criteria:
-
-- Users can choose manual BPMN-level registration, static global configuration, or opt-in API registration.
-- The default behavior does not mutate cluster listener configuration.
-
-### 6. Regression Tests
-
-- Add a BPMN test resource with a native user task and `process-engine-user-tasks` listeners.
-- Add integration tests using Camunda Process Test:
-  - starting a process delivers the user task without scheduled polling.
-  - completing the user task through `newCompleteUserTaskCommand` removes it from local support.
-  - canceling or interrupting the task removes it from local support.
-  - assigning/updating a task produces update delivery.
-- Keep the existing pull-strategy tests and examples intact.
-
-Exit criteria:
-
-- The original stale-task failure is covered: a task removed outside the adapter triggers the termination callback.
-- Tests demonstrate that listener delivery does not depend on `UserTaskState.CREATED` search loops.
-
-## Rollout Plan
-
-1. Ship the listener worker and strategy behind `delivery-strategy: LISTENER`.
-2. Keep `SCHEDULED` as the default until the listener strategy has integration coverage against both local process tests and a real orchestration cluster.
-3. Update examples to include one listener-based profile, for example `application-listener.yml`.
-4. Add docs explaining:
-   - the required topic/type `process-engine-user-tasks`.
-   - BPMN-level listener setup for 8.8.
-   - global listener setup for 8.9+.
-   - listener ordering requirements.
-   - multi-instance constraints.
-5. After adoption, consider deprecating `SCHEDULED` for native user task delivery but keep it available as a compatibility fallback.
-
-## Risks And Decisions
-
-- Listener jobs are blocking. Delivery failures can block user task lifecycle transitions and create incidents if retries are exhausted.
-- `COMPLETING` is observed before final completion. The adapter listener should be last for completion events to avoid removing a task that a later listener denies.
-- Global listener APIs are available in the current 8.9.6 client, not in the local 8.8.21 client sources.
-- In multi-instance applications with in-memory subscription state, a listener job is consumed by only one worker instance. Shared task state or an application-level broadcast is required if every node must maintain the same local task cache.
-- Startup catch-up is not solved by listener events alone. If tasks already exist before this worker starts, add a one-time native user task search on startup as a bootstrap step, not a periodic pull loop.
+- Listener jobs are blocking. Delivery failures can block user task lifecycle transitions and create incidents when
+  retries are exhausted.
+- `COMPLETING` and `CANCELING` are observed before the lifecycle transition is fully finalized by Camunda.
+- In multi-instance applications with in-memory subscription state, a listener job is consumed by only one worker
+  instance. Shared task state or application-level broadcasting is required if every node must maintain the same local
+  task cache.
+- Startup catch-up is not solved by listener events alone. Tasks that already exist before the listener worker starts are
+  not discovered unless another bootstrap mechanism performs a native user task search.
+- The listener worker's Camunda variable fetch projection is calculated when `subscribe()` opens the worker. Runtime
+  subscription changes that require additional variables need a worker reopen to update the projection.
 
 ## References
 
