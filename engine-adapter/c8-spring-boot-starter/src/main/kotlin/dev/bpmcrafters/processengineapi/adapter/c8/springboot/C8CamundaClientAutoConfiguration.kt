@@ -1,6 +1,5 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot
 
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SCHEDULED
@@ -11,7 +10,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalSer
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.FailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.modification.C8CamundaClientUserTaskModificationApiImpl
@@ -23,7 +22,6 @@ import io.camunda.client.CamundaClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
@@ -67,8 +65,8 @@ class C8CamundaClientAutoConfiguration {
     subscriptionRepository: SubscriptionRepository,
     camundaClient: CamundaClient,
     c8AdapterProperties: C8AdapterProperties
-  ): SubscribingRefreshingUserTaskDelivery {
-    return SubscribingRefreshingUserTaskDelivery(
+  ): SubscribingRefreshingZeebeJobUserTaskDelivery {
+    return SubscribingRefreshingZeebeJobUserTaskDelivery(
       subscriptionRepository = subscriptionRepository,
       camundaClient = camundaClient,
       workerId = c8AdapterProperties.serviceTasks.workerId,

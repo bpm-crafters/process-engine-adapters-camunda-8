@@ -116,8 +116,8 @@ class TaskInformationExtensionsTest {
     val event = activatedJob.toUserTaskListenerEvent()
     val taskInformation = activatedJob.toUserTaskListenerTaskInformation()
 
-    assertThat(event.taskId).isEqualTo("1234")
-    assertThat(event.eventType).isEqualTo(ListenerEventType.COMPLETING)
+    assertThat(event.first).isEqualTo("1234")
+    assertThat(event.second).isEqualTo(ListenerEventType.COMPLETING)
     assertThat(taskInformation.taskId).isEqualTo("1234")
     assertThat(taskInformation.meta).containsEntry("eventType", "COMPLETING")
     assertThat(taskInformation.meta).containsEntry("action", "complete")

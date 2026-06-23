@@ -17,6 +17,9 @@ import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * Delivery based ona user task listener.
+ */
 class UserTaskListenerDelivery(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
@@ -89,17 +92,18 @@ class UserTaskListenerDelivery(
     }
   }
 
-  internal fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean = matchesUserTaskListener(job)
-
   private fun createOrUpdate(job: ActivatedJob, reason: String) {
-    val activeSubscription = matchingSubscription(job)
+    val activeSubscription = subscriptionRepository
+      .getTaskSubscriptions()
+      .firstOrNull { subscription -> subscription.matches(job) }
+
     if (activeSubscription == null) {
       logger.trace { "PROCESS-ENGINE-C8-064: no user task subscription matched listener job ${job.key}." }
       completeListenerJob(job)
       return
     }
 
-    val taskId = job.toUserTaskListenerEvent().taskId
+    val taskId = job.toUserTaskListenerEvent().first
     val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
     val taskInformation = job.toUserTaskListenerTaskInformation().withReason(reason)
 
@@ -116,7 +120,7 @@ class UserTaskListenerDelivery(
   }
 
   private fun completeAndTerminate(job: ActivatedJob, reason: String) {
-    val taskId = job.toUserTaskListenerEvent().taskId
+    val taskId = job.toUserTaskListenerEvent().first
     completeListenerJob(job)
 
     subscriptionRepository.deactivateSubscriptionForTask(taskId)?.apply {
@@ -130,18 +134,13 @@ class UserTaskListenerDelivery(
   }
 
   private fun reasonForKnownTask(job: ActivatedJob, reason: String): String {
-    val taskId = job.toUserTaskListenerEvent().taskId
+    val taskId = job.toUserTaskListenerEvent().first
     return if (subscriptionRepository.getActiveSubscriptionForTask(taskId) == null) {
       TaskInformation.CREATE
     } else {
       reason
     }
   }
-
-  private fun matchingSubscription(job: ActivatedJob): TaskSubscriptionHandle? =
-    subscriptionRepository
-      .getTaskSubscriptions()
-      .firstOrNull { subscription -> subscription.matches(job) }
 
   private fun completeListenerJob(job: ActivatedJob) {
     camundaClient
@@ -167,7 +166,7 @@ class UserTaskListenerDelivery(
       .map { it.payloadDescription }
 
     return if (payloadDescriptions.any { it == null }) {
-      null
+      null // fetch all variables
     } else {
       payloadDescriptions
         .flatMap { it.orEmpty() }
@@ -177,7 +176,7 @@ class UserTaskListenerDelivery(
   }
 
 
-  fun TaskSubscriptionHandle.matchesUserTaskListener(job: ActivatedJob): Boolean {
+  fun TaskSubscriptionHandle.matches(job: ActivatedJob): Boolean {
     return job.kind == JobKind.TASK_LISTENER
       && job.userTask != null
       && this.taskType == TaskType.USER

@@ -1,6 +1,5 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.UserTaskListenerGlobalRegistration
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.CamundaFuture
 import io.camunda.client.api.command.ClientHttpException
@@ -15,7 +14,7 @@ import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
-internal class UserTaskListenerGlobalRegistrationTest {
+internal class UserTaskListenerGlobalRegistrationHelperTest {
 
   companion object {
     const val LISTENER_ID = "process-engine-user-tasks"
@@ -26,7 +25,7 @@ internal class UserTaskListenerGlobalRegistrationTest {
 
   @Test
   fun `should not register global listener when disabled`() {
-    val registration = UserTaskListenerGlobalRegistration(
+    val registration = UserTaskListenerGlobalRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = false,
       globalListenerId = LISTENER_ID,
@@ -50,7 +49,7 @@ internal class UserTaskListenerGlobalRegistrationTest {
     whenever(camundaClient.newGlobalTaskListenerGetRequest(LISTENER_ID)).thenReturn(getRequest)
     whenever(getRequest.send()).thenReturn(getFuture)
     whenever(getFuture.join()).thenReturn(existingListener)
-    val registration = UserTaskListenerGlobalRegistration(
+    val registration = UserTaskListenerGlobalRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = true,
       globalListenerId = LISTENER_ID,
@@ -85,7 +84,7 @@ internal class UserTaskListenerGlobalRegistrationTest {
     whenever(createStep4.afterNonGlobal(true)).thenReturn(createStep4)
     whenever(createStep4.priority(50)).thenReturn(createStep4)
     whenever(createStep4.send()).thenReturn(createFuture)
-    val registration = UserTaskListenerGlobalRegistration(
+    val registration = UserTaskListenerGlobalRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = true,
       globalListenerId = LISTENER_ID,
@@ -118,7 +117,7 @@ internal class UserTaskListenerGlobalRegistrationTest {
         null
       )
     )
-    val registration = UserTaskListenerGlobalRegistration(
+    val registration = UserTaskListenerGlobalRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = true,
       globalListenerId = LISTENER_ID,

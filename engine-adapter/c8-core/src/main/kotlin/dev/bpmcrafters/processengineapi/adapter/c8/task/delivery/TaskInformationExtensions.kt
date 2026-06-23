@@ -1,13 +1,11 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
-import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.task.TaskInformation
-import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.search.enums.ListenerEventType
 import io.camunda.client.api.search.response.Form
 import io.camunda.client.api.search.response.UserTask
-import io.camunda.client.api.search.enums.JobKind
 import io.camunda.zeebe.protocol.Protocol
 
 fun ActivatedJob.toTaskInformation(): TaskInformation = TaskInformation(
@@ -52,16 +50,16 @@ fun UserTask.toTaskInformation(form: Form?): TaskInformation = TaskInformation(
   )
 )
 
-fun ActivatedJob.toUserTaskListenerEvent(): UserTaskListenerEvent {
+fun ActivatedJob.toUserTaskListenerEvent(): Pair<String, ListenerEventType> {
   val userTask = requireNotNull(this.userTask) {
     "Activated job ${this.key} is not a user task listener job."
   }
   val userTaskKey = requireNotNull(userTask.userTaskKey) {
     "Activated user task listener job ${this.key} does not contain a user task key."
   }
-  return UserTaskListenerEvent(
-    taskId = userTaskKey.toString(),
-    eventType = this.listenerEventType
+  return Pair(
+    userTaskKey.toString(),
+    this.listenerEventType
   )
 }
 

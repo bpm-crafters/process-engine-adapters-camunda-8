@@ -83,6 +83,14 @@ class PullUserTaskDelivery(
               }
             }
         }
+      deliveredTaskIds.forEach { taskId ->
+        subscriptionRepository.getActiveSubscriptionForTask(taskId)?.let {
+          logger.trace { "PROCESS-ENGINE-C8-033: User task is gone, sending termination to the handler." }
+          it.termination.accept(TaskInformation(taskId, mapOf()).withReason(TaskInformation.DELETE))
+          subscriptionRepository.deactivateSubscriptionForTask(taskId)
+          logger.trace { "PROCESS-ENGINE-C8-034: Termination sent to handler and user task is removed." }
+        }
+      }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-035: pulling user tasks disabled, no subscriptions." }
     }

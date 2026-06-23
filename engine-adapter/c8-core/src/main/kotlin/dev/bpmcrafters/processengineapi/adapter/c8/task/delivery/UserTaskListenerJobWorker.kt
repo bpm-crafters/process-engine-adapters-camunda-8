@@ -4,6 +4,9 @@ import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
 import io.camunda.client.api.worker.JobWorker
 
+/**
+ * User task listener job worker.
+ */
 class UserTaskListenerJobWorker(
   private val camundaClient: CamundaClient,
   private val topic: String,

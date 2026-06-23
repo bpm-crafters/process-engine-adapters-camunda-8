@@ -2,7 +2,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8
 
 import dev.bpmcrafters.processengineapi.decision.EvaluateDecisionApi
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
@@ -15,7 +15,7 @@ import dev.bpmcrafters.processengineapi.test.ProcessTestHelper
 
 class C8ProcessTestHelper(
   private val startProcessApi: StartProcessApi,
-  private val subscribingUserTaskDelivery: SubscribingRefreshingUserTaskDelivery,
+  private val subscribingUserTaskDelivery: SubscribingRefreshingZeebeJobUserTaskDelivery,
   private val pullUserTaskDelivery: PullUserTaskDelivery,
   private val subscribingServiceTaskDelivery: SubscribingServiceTaskDelivery,
   private val taskSubscriptionApi: TaskSubscriptionApi,

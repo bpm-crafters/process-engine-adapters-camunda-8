@@ -1,4 +1,4 @@
-package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
+package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.command.ClientHttpException
@@ -8,7 +8,10 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val globalRegistrationLogger = KotlinLogging.logger {}
 
-open class UserTaskListenerGlobalRegistration(
+/**
+ * Helper class to register a global user task listener.
+ */
+open class UserTaskListenerGlobalRegistrationHelper(
   private val camundaClient: CamundaClient,
   private val autoRegisterGlobalListener: Boolean,
   private val globalListenerId: String,

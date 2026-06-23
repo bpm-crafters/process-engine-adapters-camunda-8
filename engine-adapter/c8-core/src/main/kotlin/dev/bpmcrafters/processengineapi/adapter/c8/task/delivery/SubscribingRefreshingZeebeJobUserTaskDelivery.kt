@@ -21,7 +21,7 @@ import io.grpc.Status
 
 private val logger = KotlinLogging.logger {}
 
-class SubscribingRefreshingUserTaskDelivery(
+class SubscribingRefreshingZeebeJobUserTaskDelivery(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
   private val workerId: String,
@@ -92,13 +92,13 @@ class SubscribingRefreshingUserTaskDelivery(
     if (subscriptions.isNotEmpty()) {
       subscriptions.forEach { taskId ->
         try {
-          logger.trace { "PROCESS-ENGINE-C8-048: Extending job timout for user task $taskId..." }
+          logger.trace { "PROCESS-ENGINE-C8-048: Extending job timeout for user task $taskId..." }
           camundaClient
             .newUpdateTimeoutCommand(taskId.toLong())
             .timeout(userTaskLockTimeoutMs)
             .send()
             .join()
-          logger.trace { "PROCESS-ENGINE-C8-049: Extended job timout for user task $taskId." }
+          logger.trace { "PROCESS-ENGINE-C8-049: Extended job timeout for user task $taskId." }
         } catch (e: ClientStatusException) {
           when (e.statusCode) {
             Status.Code.NOT_FOUND -> {

@@ -4,11 +4,11 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterPropertie
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.C8SubscriptionAutoConfiguration
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.SubscribingUserTaskDeliveryBinding
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.UserTaskListenerDeliveryBinding
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.UserTaskListenerGlobalRegistration
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerGlobalRegistrationHelper
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskJobCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
 import io.camunda.client.CamundaClient
 import io.mockk.mockk
@@ -47,7 +47,7 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
         assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(UserTaskListenerDelivery::class.java)
         assertThat(it.getBean("c8-user-task-completion")).isInstanceOf(C8CamundaClientUserTaskCompletionApiImpl::class.java)
         assertThat(it.getBean("c8-user-task-delivery-subscription")).isInstanceOf(UserTaskListenerDeliveryBinding::class.java)
-        assertThat(it.getBean(UserTaskListenerGlobalRegistration::class.java)).isNotNull()
+        assertThat(it.getBean(UserTaskListenerGlobalRegistrationHelper::class.java)).isNotNull()
       }
   }
 
@@ -73,7 +73,7 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
       )
       .run {
         assertThat(it).hasBean("c8-user-task-delivery")
-        assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(SubscribingRefreshingUserTaskDelivery::class.java)
+        assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(SubscribingRefreshingZeebeJobUserTaskDelivery::class.java)
         assertThat(it.getBean("c8-user-task-completion")).isInstanceOf(C8CamundaClientUserTaskJobCompletionApiImpl::class.java)
         assertThat(it.getBean("c8-user-task-delivery-subscription")).isInstanceOf(SubscribingUserTaskDeliveryBinding::class.java)
       }
