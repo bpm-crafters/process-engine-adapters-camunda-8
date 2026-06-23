@@ -12,7 +12,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryF
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.modification.C8CamundaClientUserTaskModificationApiImpl
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
@@ -142,9 +142,9 @@ class C8CamundaClientAutoConfiguration {
     subscriptionRepository: SubscriptionRepository,
     camundaClient: CamundaClient,
     c8AdapterProperties: C8AdapterProperties
-  ): UserTaskListenerDelivery {
+  ): ListenerUserTaskDelivery {
     val listenerProperties = c8AdapterProperties.userTasks.listener
-    return UserTaskListenerDelivery(
+    return ListenerUserTaskDelivery(
       subscriptionRepository = subscriptionRepository,
       camundaClient = camundaClient,
       topic = listenerProperties.topic,

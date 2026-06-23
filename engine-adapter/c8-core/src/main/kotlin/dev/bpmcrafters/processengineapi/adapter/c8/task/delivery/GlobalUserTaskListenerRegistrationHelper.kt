@@ -9,9 +9,9 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 private val globalRegistrationLogger = KotlinLogging.logger {}
 
 /**
- * Helper class to register a global user task listener.
+ * Helper class to register a global user task listener using Camunda OC API.
  */
-open class UserTaskListenerGlobalRegistrationHelper(
+open class GlobalUserTaskListenerRegistrationHelper(
   private val camundaClient: CamundaClient,
   private val autoRegisterGlobalListener: Boolean,
   private val globalListenerId: String,

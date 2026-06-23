@@ -47,8 +47,6 @@ class PullUserTaskDelivery(
               val form = task.formKey?.let { camundaClient.newUserTaskGetFormRequest(task.userTaskKey).send().join() }
               val taskInformation = task.toTaskInformation(form).withReason(
                 if (deliveredTaskIds.contains(taskId) && subscriptionRepository.getActiveSubscriptionForTask(taskId) == activeSubscription) {
-                  // remove from already delivered
-                  deliveredTaskIds.remove(taskId)
                   // task was already delivered to this subscription
                   TaskInformation.UPDATE
                 } else {
@@ -56,7 +54,7 @@ class PullUserTaskDelivery(
                   TaskInformation.CREATE
                 }
               )
-
+              // remove from already delivered
               deliveredTaskIds.remove(taskId)
 
               val variableRequest = camundaClient.newUserTaskVariableSearchRequest(task.userTaskKey).apply {

@@ -4,12 +4,12 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterPropertie
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.C8SubscriptionAutoConfiguration
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.SubscribingUserTaskDeliveryBinding
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription.UserTaskListenerDeliveryBinding
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerGlobalRegistrationHelper
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskJobCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import io.camunda.client.CamundaClient
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -44,10 +44,10 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
       )
       .run {
         assertThat(it).hasBean("c8-user-task-delivery")
-        assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(UserTaskListenerDelivery::class.java)
+        assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(ListenerUserTaskDelivery::class.java)
         assertThat(it.getBean("c8-user-task-completion")).isInstanceOf(C8CamundaClientUserTaskCompletionApiImpl::class.java)
         assertThat(it.getBean("c8-user-task-delivery-subscription")).isInstanceOf(UserTaskListenerDeliveryBinding::class.java)
-        assertThat(it.getBean(UserTaskListenerGlobalRegistrationHelper::class.java)).isNotNull()
+        assertThat(it.getBean(GlobalUserTaskListenerRegistrationHelper::class.java)).isNotNull()
       }
   }
 

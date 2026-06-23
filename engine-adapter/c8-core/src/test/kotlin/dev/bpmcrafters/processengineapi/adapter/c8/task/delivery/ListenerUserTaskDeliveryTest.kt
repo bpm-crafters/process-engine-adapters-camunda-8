@@ -25,7 +25,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Duration
 
-class UserTaskListenerDeliveryTest {
+class ListenerUserTaskDeliveryTest {
 
   companion object {
     const val JOB_KEY = 9876L
@@ -41,7 +41,7 @@ class UserTaskListenerDeliveryTest {
 
   private val camundaClient: CamundaClient = mock()
   private val subscriptionRepository = InMemSubscriptionRepository()
-  private val delivery = UserTaskListenerDelivery(
+  private val delivery = ListenerUserTaskDelivery(
     camundaClient = camundaClient,
     subscriptionRepository = subscriptionRepository,
     retryTimeoutInSeconds = 7

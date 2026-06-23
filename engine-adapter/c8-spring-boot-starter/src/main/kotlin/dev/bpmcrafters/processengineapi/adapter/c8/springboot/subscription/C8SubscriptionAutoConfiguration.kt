@@ -6,8 +6,8 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterPropertie
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.UserTaskListenerGlobalRegistrationHelper
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
 import io.camunda.client.CamundaClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
@@ -54,8 +54,8 @@ class C8SubscriptionAutoConfiguration {
   fun userTaskListenerGlobalRegistration(
     camundaClient: CamundaClient,
     c8AdapterProperties: C8AdapterProperties,
-  ): UserTaskListenerGlobalRegistrationHelper =
-    UserTaskListenerGlobalRegistrationHelper(
+  ): GlobalUserTaskListenerRegistrationHelper =
+    GlobalUserTaskListenerRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = c8AdapterProperties.userTasks.listener.autoRegisterGlobalListener,
       globalListenerId = c8AdapterProperties.userTasks.listener.globalListenerId,
@@ -69,12 +69,12 @@ class C8SubscriptionAutoConfiguration {
   @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
   fun userTaskListenerDeliveryBinding(
     @Qualifier("c8-user-task-delivery")
-    userTaskListenerDelivery: UserTaskListenerDelivery,
-    userTaskListenerGlobalRegistrationHelper: UserTaskListenerGlobalRegistrationHelper,
+    listenerUserTaskDelivery: ListenerUserTaskDelivery,
+    globalUserTaskListenerRegistrationHelper: GlobalUserTaskListenerRegistrationHelper,
   ): UserTaskListenerDeliveryBinding {
     return UserTaskListenerDeliveryBinding(
-      userTaskListenerDelivery = userTaskListenerDelivery,
-      userTaskListenerGlobalRegistrationHelper = userTaskListenerGlobalRegistrationHelper
+      listenerUserTaskDelivery = listenerUserTaskDelivery,
+      globalUserTaskListenerRegistrationHelper = globalUserTaskListenerRegistrationHelper
     )
   }
 }

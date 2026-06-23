@@ -12,15 +12,16 @@ import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
 import io.camunda.client.api.search.enums.JobKind
 import io.camunda.client.api.search.enums.ListenerEventType
+import io.camunda.client.api.worker.JobWorker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
 /**
- * Delivery based ona user task listener.
+ * Delivery based on a user task listener.
  */
-class UserTaskListenerDelivery(
+class ListenerUserTaskDelivery(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
   private val topic: String = DEFAULT_TOPIC,
@@ -78,7 +79,7 @@ class UserTaskListenerDelivery(
       return
     }
 
-    logger.warn { "PROCESS-ENGINE-C8-062: consuming user task listener job ${job.key} of type ${job.listenerEventType}." }
+    logger.trace { "PROCESS-ENGINE-C8-063: consuming user task listener job ${job.key} of type ${job.listenerEventType}." }
     when (job.listenerEventType) {
       ListenerEventType.CREATING -> createOrUpdate(job, TaskInformation.CREATE)
       ListenerEventType.ASSIGNING -> createOrUpdate(job, reasonForKnownTask(job, TaskInformation.ASSIGN))
@@ -86,7 +87,7 @@ class UserTaskListenerDelivery(
       ListenerEventType.COMPLETING -> completeAndTerminate(job, TaskInformation.COMPLETE)
       ListenerEventType.CANCELING -> completeAndTerminate(job, TaskInformation.DELETE)
       else -> {
-        logger.trace { "PROCESS-ENGINE-C8-063: completing unsupported user task listener event ${job.listenerEventType} for job ${job.key}." }
+        logger.trace { "PROCESS-ENGINE-C8-064: completing unsupported user task listener event ${job.listenerEventType} for job ${job.key}." }
         completeListenerJob(job)
       }
     }
@@ -98,7 +99,7 @@ class UserTaskListenerDelivery(
       .firstOrNull { subscription -> subscription.matches(job) }
 
     if (activeSubscription == null) {
-      logger.trace { "PROCESS-ENGINE-C8-064: no user task subscription matched listener job ${job.key}." }
+      logger.trace { "PROCESS-ENGINE-C8-065: no user task subscription matched listener job ${job.key}." }
       completeListenerJob(job)
       return
     }
@@ -108,13 +109,13 @@ class UserTaskListenerDelivery(
     val taskInformation = job.toUserTaskListenerTaskInformation().withReason(reason)
 
     try {
-      logger.debug { "PROCESS-ENGINE-C8-065: delivering user task listener event ${job.listenerEventType} for task $taskId." }
+      logger.debug { "PROCESS-ENGINE-C8-066: delivering user task listener event ${job.listenerEventType} for task $taskId." }
       activeSubscription.action.accept(taskInformation, variables)
       subscriptionRepository.activateSubscriptionForTask(taskId, activeSubscription)
       completeListenerJob(job)
-      logger.debug { "PROCESS-ENGINE-C8-066: delivered user task listener event ${job.listenerEventType} for task $taskId." }
+      logger.debug { "PROCESS-ENGINE-C8-067: delivered user task listener event ${job.listenerEventType} for task $taskId." }
     } catch (e: Exception) {
-      logger.error(e) { "PROCESS-ENGINE-C8-067: failed to deliver user task listener event ${job.listenerEventType} for task $taskId." }
+      logger.error(e) { "PROCESS-ENGINE-C8-068: failed to deliver user task listener event ${job.listenerEventType} for task $taskId." }
       failListenerJob(job, e.message ?: "Failed to deliver user task listener event")
     }
   }
@@ -125,10 +126,10 @@ class UserTaskListenerDelivery(
 
     subscriptionRepository.deactivateSubscriptionForTask(taskId)?.apply {
       try {
-        logger.debug { "PROCESS-ENGINE-C8-068: terminating user task listener delivery for task $taskId with reason $reason." }
+        logger.debug { "PROCESS-ENGINE-C8-069: terminating user task listener delivery for task $taskId with reason $reason." }
         termination.accept(job.toUserTaskListenerTaskInformation().withReason(reason))
       } catch (e: Exception) {
-        logger.error(e) { "PROCESS-ENGINE-C8-069: failed to terminate user task listener delivery for task $taskId." }
+        logger.error(e) { "PROCESS-ENGINE-C8-070: failed to terminate user task listener delivery for task $taskId." }
       }
     }
   }
@@ -196,6 +197,50 @@ class UserTaskListenerDelivery(
           else -> false
         }
       }
+  }
+
+
+  /**
+   * User task listener job worker.
+   */
+  class UserTaskListenerJobWorker(
+    private val camundaClient: CamundaClient,
+    private val topic: String,
+    private val workerId: String,
+    private val maxJobsActive: Int,
+    private val streamEnabled: Boolean,
+    private val lockTimeInSeconds: Long,
+    private val fetchVariables: List<String>?,
+    private val handler: (ActivatedJob) -> Unit
+  ) : AutoCloseable {
+
+    private var jobWorker: JobWorker? = null
+
+    fun open() {
+      if (jobWorker?.isOpen == true) {
+        return
+      }
+
+      jobWorker = camundaClient
+        .newWorker()
+        .jobType(topic)
+        .handler { _, job -> handler(job) }
+        .name(workerId)
+        .maxJobsActive(maxJobsActive)
+        .streamEnabled(streamEnabled)
+        .timeout(lockTimeInSeconds * 1000)
+        .apply {
+          if (fetchVariables != null) {
+            fetchVariables(fetchVariables)
+          }
+        }
+        .open()
+    }
+
+    override fun close() {
+      jobWorker?.close()
+      jobWorker = null
+    }
   }
 
 }

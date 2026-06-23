@@ -14,7 +14,7 @@ import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
-internal class UserTaskListenerGlobalRegistrationHelperTest {
+internal class GlobalUserTaskListenerRegistrationHelperTest {
 
   companion object {
     const val LISTENER_ID = "process-engine-user-tasks"
@@ -25,7 +25,7 @@ internal class UserTaskListenerGlobalRegistrationHelperTest {
 
   @Test
   fun `should not register global listener when disabled`() {
-    val registration = UserTaskListenerGlobalRegistrationHelper(
+    val registration = GlobalUserTaskListenerRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = false,
       globalListenerId = LISTENER_ID,
@@ -49,7 +49,7 @@ internal class UserTaskListenerGlobalRegistrationHelperTest {
     whenever(camundaClient.newGlobalTaskListenerGetRequest(LISTENER_ID)).thenReturn(getRequest)
     whenever(getRequest.send()).thenReturn(getFuture)
     whenever(getFuture.join()).thenReturn(existingListener)
-    val registration = UserTaskListenerGlobalRegistrationHelper(
+    val registration = GlobalUserTaskListenerRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = true,
       globalListenerId = LISTENER_ID,
@@ -84,7 +84,7 @@ internal class UserTaskListenerGlobalRegistrationHelperTest {
     whenever(createStep4.afterNonGlobal(true)).thenReturn(createStep4)
     whenever(createStep4.priority(50)).thenReturn(createStep4)
     whenever(createStep4.send()).thenReturn(createFuture)
-    val registration = UserTaskListenerGlobalRegistrationHelper(
+    val registration = GlobalUserTaskListenerRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = true,
       globalListenerId = LISTENER_ID,
@@ -117,7 +117,7 @@ internal class UserTaskListenerGlobalRegistrationHelperTest {
         null
       )
     )
-    val registration = UserTaskListenerGlobalRegistrationHelper(
+    val registration = GlobalUserTaskListenerRegistrationHelper(
       camundaClient = camundaClient,
       autoRegisterGlobalListener = true,
       globalListenerId = LISTENER_ID,
