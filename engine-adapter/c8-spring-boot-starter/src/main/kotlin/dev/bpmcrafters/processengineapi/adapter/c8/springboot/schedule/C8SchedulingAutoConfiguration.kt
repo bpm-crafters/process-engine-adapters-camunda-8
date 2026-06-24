@@ -3,18 +3,16 @@ package dev.bpmcrafters.processengineapi.adapter.c8.springboot.schedule
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterAutoConfiguration
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterEnabledCondition
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SCHEDULED
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnUserTaskDeliveryStrategy
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
@@ -71,13 +69,13 @@ class C8SchedulingAutoConfiguration {
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
   fun refreshingUserTaskDeliveryBinding(
     @Qualifier("c8-user-task-delivery")
-    subscribingRefreshingUserTaskDelivery: SubscribingRefreshingUserTaskDelivery,
+    subscribingRefreshingZeebeJobUserTaskDelivery: SubscribingRefreshingZeebeJobUserTaskDelivery,
     c8AdapterProperties: C8AdapterProperties,
     @Qualifier("c8-task-scheduler")
     c8TaskScheduler: TaskScheduler
   ): RefreshingUserTaskDeliveryBinding {
     return RefreshingUserTaskDeliveryBinding(
-      subscribingRefreshingUserTaskDelivery = subscribingRefreshingUserTaskDelivery,
+      subscribingRefreshingZeebeJobUserTaskDelivery = subscribingRefreshingZeebeJobUserTaskDelivery,
       c8AdapterProperties = c8AdapterProperties,
       c8taskScheduler = c8TaskScheduler
     )

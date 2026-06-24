@@ -1,7 +1,7 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot
 
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SCHEDULED
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClientUserTaskCompletionApiImpl
@@ -10,8 +10,9 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalSer
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.FailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.modification.C8CamundaClientUserTaskModificationApiImpl
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
@@ -21,7 +22,6 @@ import io.camunda.client.CamundaClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
@@ -65,8 +65,8 @@ class C8CamundaClientAutoConfiguration {
     subscriptionRepository: SubscriptionRepository,
     camundaClient: CamundaClient,
     c8AdapterProperties: C8AdapterProperties
-  ): SubscribingRefreshingUserTaskDelivery {
-    return SubscribingRefreshingUserTaskDelivery(
+  ): SubscribingRefreshingZeebeJobUserTaskDelivery {
+    return SubscribingRefreshingZeebeJobUserTaskDelivery(
       subscriptionRepository = subscriptionRepository,
       camundaClient = camundaClient,
       workerId = c8AdapterProperties.serviceTasks.workerId,
@@ -111,6 +111,18 @@ class C8CamundaClientAutoConfiguration {
       subscriptionRepository = subscriptionRepository
     )
 
+  @Bean("c8-user-task-completion")
+  @Qualifier("c8-user-task-completion")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun listenerUserTaskCompletionStrategy(
+    camundaClient: CamundaClient,
+    subscriptionRepository: SubscriptionRepository
+  ): UserTaskCompletionApi =
+    C8CamundaClientUserTaskCompletionApiImpl(
+      camundaClient = camundaClient,
+      subscriptionRepository = subscriptionRepository
+    )
+
   @Bean("c8-user-task-delivery")
   @Qualifier("c8-user-task-delivery")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SCHEDULED)
@@ -122,6 +134,27 @@ class C8CamundaClientAutoConfiguration {
       subscriptionRepository = subscriptionRepository,
       camundaClient = camundaClient
     )
+
+  @Bean("c8-user-task-delivery")
+  @Qualifier("c8-user-task-delivery")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun listenerUserTaskDelivery(
+    subscriptionRepository: SubscriptionRepository,
+    camundaClient: CamundaClient,
+    c8AdapterProperties: C8AdapterProperties
+  ): ListenerUserTaskDelivery {
+    val listenerProperties = c8AdapterProperties.userTasks.listener
+    return ListenerUserTaskDelivery(
+      subscriptionRepository = subscriptionRepository,
+      camundaClient = camundaClient,
+      topic = listenerProperties.topic,
+      workerId = listenerProperties.workerId,
+      maxJobsActive = listenerProperties.maxJobsActive,
+      streamEnabled = listenerProperties.streamEnabled,
+      lockTimeInSeconds = listenerProperties.lockTimeInSeconds,
+      retryTimeoutInSeconds = listenerProperties.retryTimeoutInSeconds
+    )
+  }
 
   @Bean("c8-user-task-modification")
   @Qualifier("c8-user-task-modification")

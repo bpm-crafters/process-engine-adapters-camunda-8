@@ -6,7 +6,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClie
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
@@ -48,7 +48,7 @@ abstract class AbstractC8ApiITest : JGivenSpringBaseIntegrationTest() {
   fun setUp() {
     val workerId = this.javaClass.simpleName
     val subscriptionRepository = InMemSubscriptionRepository()
-    val userTaskDelivery = SubscribingRefreshingUserTaskDelivery(
+    val userTaskDelivery = SubscribingRefreshingZeebeJobUserTaskDelivery(
       this.client,
       subscriptionRepository,
       workerId,

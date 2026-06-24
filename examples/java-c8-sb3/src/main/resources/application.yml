@@ -18,8 +18,10 @@ dev:
             worker-id: example-worker
           user-tasks:
             type: native
-            delivery-strategy: scheduled
+            delivery-strategy: listener
             schedule-delivery-fixed-rate-in-seconds: 5
+            listener:
+              auto-register-global-listener: true
 
 logging:
   level:

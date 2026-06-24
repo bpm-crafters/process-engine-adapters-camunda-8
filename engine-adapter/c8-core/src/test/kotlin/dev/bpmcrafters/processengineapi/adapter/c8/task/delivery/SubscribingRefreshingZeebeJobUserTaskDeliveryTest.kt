@@ -2,19 +2,14 @@ package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
-import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
-import dev.bpmcrafters.processengineapi.task.TaskSubscription
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.CamundaClient
-import io.camunda.client.api.command.ActivateJobsCommandStep1
-import io.camunda.client.api.command.ActivateJobsCommandStep1.ActivateJobsCommandStep3
 import io.camunda.client.api.response.ActivatedJob
 import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep2
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
-import org.mockito.ArgumentMatchers.anyLong
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -22,11 +17,11 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
-class SubscribingRefreshingUserTaskDeliveryTest {
+class SubscribingRefreshingZeebeJobUserTaskDeliveryTest {
 
   // We need an instance of SubscribingRefreshingUserTaskDelivery because matches is an extension function
   // on TaskSubscriptionHandle declared inside SubscribingRefreshingUserTaskDelivery class.
-  private val delivery = SubscribingRefreshingUserTaskDelivery(
+  private val delivery = SubscribingRefreshingZeebeJobUserTaskDelivery(
     camundaClient = mock(),
     subscriptionRepository = InMemSubscriptionRepository(),
     workerId = "test-worker",
@@ -194,7 +189,7 @@ class SubscribingRefreshingUserTaskDeliveryTest {
     whenever(workerBuilder3.fetchVariables(any<List<String>>())).thenReturn(workerBuilder3)
     whenever(workerBuilder3.open()).thenReturn(jobWorker)
 
-    val delivery = SubscribingRefreshingUserTaskDelivery(
+    val delivery = SubscribingRefreshingZeebeJobUserTaskDelivery(
       camundaClient = camundaClient,
       subscriptionRepository = subscriptionRepository,
       workerId = "test-worker",
