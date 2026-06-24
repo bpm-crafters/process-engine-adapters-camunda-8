@@ -4,10 +4,11 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.*
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
 import io.camunda.client.CamundaClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
@@ -70,11 +71,16 @@ class C8SubscriptionAutoConfiguration {
   fun userTaskListenerDeliveryBinding(
     @Qualifier("c8-user-task-delivery")
     listenerUserTaskDelivery: ListenerUserTaskDelivery,
+    @Qualifier("c8-user-task-listener-preload-delivery")
+    listenerPreloadUserTaskDelivery: PullUserTaskDelivery,
     globalUserTaskListenerRegistrationHelper: GlobalUserTaskListenerRegistrationHelper,
+    c8AdapterProperties: C8AdapterProperties,
   ): UserTaskListenerDeliveryBinding {
     return UserTaskListenerDeliveryBinding(
       listenerUserTaskDelivery = listenerUserTaskDelivery,
-      globalUserTaskListenerRegistrationHelper = globalUserTaskListenerRegistrationHelper
+      listenerPreloadUserTaskDelivery = listenerPreloadUserTaskDelivery,
+      globalUserTaskListenerRegistrationHelper = globalUserTaskListenerRegistrationHelper,
+      c8AdapterProperties = c8AdapterProperties
     )
   }
 }

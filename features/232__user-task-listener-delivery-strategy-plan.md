@@ -29,6 +29,8 @@ job type in the adapter.
 - Native user task completion remains wired through `C8CamundaClientUserTaskCompletionApiImpl` when `LISTENER` is active.
 - Existing `SCHEDULED` and `SUBSCRIPTION_REFRESHING` strategies remain available and keep their previous bean graphs.
 - Optional global user task listener auto-registration is available and disabled by default.
+- Optional one-shot startup preload is enabled by default to deliver already-created native user tasks before the
+  listener worker opens.
 - Listener delivery preserves existing Process Engine API task subscription semantics: task type, task description key,
   restrictions, payload description filtering, action callback, termination callback, and active delivered-task tracking.
 
@@ -241,21 +243,58 @@ dev:
               global-listener-retries: 3
               global-listener-after-non-global: true
               global-listener-priority: 0
+              preload-existing-tasks: true
 ```
 
 When `LISTENER` is active:
 
 - `C8CamundaClientAutoConfiguration` creates `ListenerUserTaskDelivery` as bean `c8-user-task-delivery`.
+- `C8CamundaClientAutoConfiguration` creates a dedicated `PullUserTaskDelivery` as bean
+  `c8-user-task-listener-preload-delivery` for one-shot startup preload.
 - `C8CamundaClientAutoConfiguration` creates `C8CamundaClientUserTaskCompletionApiImpl` as bean
   `c8-user-task-completion`.
 - `C8SubscriptionAutoConfiguration` creates `GlobalUserTaskListenerRegistrationHelper`.
 - `C8SubscriptionAutoConfiguration` creates `UserTaskListenerDeliveryBinding` as bean
   `c8-user-task-delivery-subscription`.
 - `UserTaskListenerDeliveryBinding` reacts to `ApplicationStartedEvent`, registers the global listener when enabled, and
-  then subscribes to listener jobs.
+  when `preload-existing-tasks` is enabled calls `PullUserTaskDelivery.refresh()` once before subscribing to listener
+  jobs.
 
 There is no scheduled binding for `LISTENER`. `SCHEDULED` remains the pull-based native user task strategy, and
 `SUBSCRIPTION_REFRESHING` remains the Zeebe-job-based user task strategy with job completion.
+
+## Startup Preload
+
+Listener jobs only report lifecycle changes that happen while the listener infrastructure is present. Native user tasks
+that already reached `CREATED` before the application starts are therefore preloaded with a one-shot native user task
+search.
+
+`preload-existing-tasks` defaults to `true`. Startup sequence for `LISTENER` is:
+
+1. Register the global listener when auto-registration is enabled.
+2. Preload existing native user tasks once with `PullUserTaskDelivery.refresh()` when enabled.
+3. Open the listener worker with `ListenerUserTaskDelivery.subscribe()`.
+
+The preload reuses the existing pull delivery semantics. Matching tasks are delivered to the same subscription callbacks
+and activated in the same `SubscriptionRepository`. Preload failures are logged and do not prevent listener worker
+startup. Global listener registration failures keep their existing fail-fast behavior.
+
+Applications can disable startup preload:
+
+```yaml
+dev:
+  bpm-crafters:
+    process-api:
+      adapter:
+        c8:
+          user-tasks:
+            listener:
+              preload-existing-tasks: false
+```
+
+Preload only sees subscriptions that already exist when the `ApplicationStartedEvent` listener runs. Tasks matching
+subscriptions created later are not discovered by this one-shot search; future task changes still arrive through listener
+events.
 
 ## Listener Registration
 
@@ -353,10 +392,17 @@ Current coverage includes:
   - registration failure surfacing
 - `C8UserTaskDeliveryStrategyAutoConfigurationTest`
   - `LISTENER` bean graph
+  - listener preload delivery bean graph
   - unchanged `SCHEDULED` bean graph
   - unchanged `SUBSCRIPTION_REFRESHING` bean graph
+- `UserTaskListenerDeliveryBindingTest`
+  - registration, preload, and listener subscription startup ordering
+  - disabled preload behavior
+  - listener subscription after preload failure
+  - fail-fast behavior after global listener registration failure
 
-No code in this feature requires `PullUserTaskDelivery.refresh()` for new listener events.
+`PullUserTaskDelivery.refresh()` is used only for one-shot startup preload. It is not used for new listener events after
+the listener worker is open.
 
 ## Known Constraints
 
@@ -366,8 +412,9 @@ No code in this feature requires `PullUserTaskDelivery.refresh()` for new listen
 - In multi-instance applications with in-memory subscription state, a listener job is consumed by only one worker
   instance. Shared task state or application-level broadcasting is required if every node must maintain the same local
   task cache.
-- Startup catch-up is not solved by listener events alone. Tasks that already exist before the listener worker starts are
-  not discovered unless another bootstrap mechanism performs a native user task search.
+- Startup preload runs once per application instance. Deployments with side-effecting subscription actions should make
+  preload handling idempotent or use shared task state if duplicate delivery across instances is not acceptable.
+- Startup preload does not discover tasks for subscriptions that are created after the preload has run.
 - The listener worker's Camunda variable fetch projection is calculated when `subscribe()` opens the worker. Runtime
   subscription changes that require additional variables need a worker reopen to update the projection.
 

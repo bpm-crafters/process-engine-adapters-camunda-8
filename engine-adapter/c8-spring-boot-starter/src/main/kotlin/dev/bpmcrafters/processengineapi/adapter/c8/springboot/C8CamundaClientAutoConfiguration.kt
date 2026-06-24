@@ -9,10 +9,10 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClie
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8ExternalServiceTaskCompletionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.FailureRetrySupplier
 import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.LinearMemoryFailureRetrySupplier
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.modification.C8CamundaClientUserTaskModificationApiImpl
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
@@ -155,6 +155,18 @@ class C8CamundaClientAutoConfiguration {
       retryTimeoutInSeconds = listenerProperties.retryTimeoutInSeconds
     )
   }
+
+  @Bean("c8-user-task-listener-preload-delivery")
+  @Qualifier("c8-user-task-listener-preload-delivery")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun listenerUserTaskPreloadDelivery(
+    subscriptionRepository: SubscriptionRepository,
+    camundaClient: CamundaClient,
+  ): PullUserTaskDelivery =
+    PullUserTaskDelivery(
+      subscriptionRepository = subscriptionRepository,
+      camundaClient = camundaClient
+    )
 
   @Bean("c8-user-task-modification")
   @Qualifier("c8-user-task-modification")
