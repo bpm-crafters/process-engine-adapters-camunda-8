@@ -53,7 +53,7 @@ class SubscribingServiceTaskDeliveryTest {
       taskDescriptionKey = "test-topic",
       restrictions = mapOf(
         CommonRestrictions.ACTIVITY_ID to "activity-1",
-        "workerLockDurationInMilliseconds" to "5000"
+        CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS to "5000"
       ),
       payloadDescription = null,
       action = { _, _ -> },

@@ -1,19 +1,19 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
 
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterAutoConfiguration
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterEnabledCondition
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.Companion.DEFAULT_PREFIX
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.*
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnServiceTaskDeliveryStrategy
-import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnUserTaskDeliveryStrategy
-import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
+import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
+import io.camunda.client.CamundaClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 
@@ -43,10 +43,44 @@ class C8SubscriptionAutoConfiguration {
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
   fun subscribingUserTaskDeliveryBinding(
     @Qualifier("c8-user-task-delivery")
-    subscribingRefreshingUserTaskDelivery: SubscribingRefreshingUserTaskDelivery,
+    subscribingRefreshingZeebeJobUserTaskDelivery: SubscribingRefreshingZeebeJobUserTaskDelivery,
   ): SubscribingUserTaskDeliveryBinding {
     return SubscribingUserTaskDeliveryBinding(
-      subscribingRefreshingUserTaskDelivery = subscribingRefreshingUserTaskDelivery
+      subscribingRefreshingZeebeJobUserTaskDelivery = subscribingRefreshingZeebeJobUserTaskDelivery
+    )
+  }
+
+  @Bean
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun userTaskListenerGlobalRegistration(
+    camundaClient: CamundaClient,
+    c8AdapterProperties: C8AdapterProperties,
+  ): GlobalUserTaskListenerRegistrationHelper =
+    GlobalUserTaskListenerRegistrationHelper(
+      camundaClient = camundaClient,
+      autoRegisterGlobalListener = c8AdapterProperties.userTasks.listener.autoRegisterGlobalListener,
+      globalListenerId = c8AdapterProperties.userTasks.listener.globalListenerId,
+      topic = c8AdapterProperties.userTasks.listener.topic,
+      globalListenerRetries = c8AdapterProperties.userTasks.listener.globalListenerRetries,
+      globalListenerAfterNonGlobal = c8AdapterProperties.userTasks.listener.globalListenerAfterNonGlobal,
+      globalListenerPriority = c8AdapterProperties.userTasks.listener.globalListenerPriority
+    )
+
+  @Bean("c8-user-task-delivery-subscription")
+  @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
+  fun userTaskListenerDeliveryBinding(
+    @Qualifier("c8-user-task-delivery")
+    listenerUserTaskDelivery: ListenerUserTaskDelivery,
+    @Qualifier("c8-user-task-listener-preload-delivery")
+    listenerPreloadUserTaskDelivery: PullUserTaskDelivery,
+    globalUserTaskListenerRegistrationHelper: GlobalUserTaskListenerRegistrationHelper,
+    c8AdapterProperties: C8AdapterProperties,
+  ): UserTaskListenerDeliveryBinding {
+    return UserTaskListenerDeliveryBinding(
+      listenerUserTaskDelivery = listenerUserTaskDelivery,
+      listenerPreloadUserTaskDelivery = listenerPreloadUserTaskDelivery,
+      globalUserTaskListenerRegistrationHelper = globalUserTaskListenerRegistrationHelper,
+      c8AdapterProperties = c8AdapterProperties
     )
   }
 }

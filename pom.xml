@@ -11,7 +11,7 @@
 
   <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
   <artifactId>process-engine-adapter-camunda-platform-c8-root</artifactId>
-  <version>2026.06.1</version>
+  <version>2026.06.2</version>
   <name>POM: Camunda 8 Adapter Project root</name>
   <description>Process Engine Adapters Camunda 8</description>
   <url>https://github.com/bpm-crafters/process-engine-adapters-camunda-8/</url>
@@ -20,11 +20,11 @@
   <properties>
     <!-- COMMON GLOBAL -->
     <spring-boot.version>4.0.2</spring-boot.version>
-    <process-engine-api.version>1.6</process-engine-api.version>
+    <process-engine-api.version>1.7</process-engine-api.version>
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
-    <camunda.version>8.9.6</camunda.version>
+    <camunda.version>8.9.9</camunda.version>
 
     <!-- TEST -->
     <mockito.version>6.3.0</mockito.version>

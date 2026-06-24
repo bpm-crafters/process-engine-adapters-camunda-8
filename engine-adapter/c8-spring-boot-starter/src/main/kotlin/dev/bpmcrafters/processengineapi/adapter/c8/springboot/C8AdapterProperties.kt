@@ -65,6 +65,62 @@ class C8AdapterProperties(
      * Fixed rate for scheduled user task delivery.
      */
     val scheduleDeliveryFixedRateInSeconds: Long = 5L,
+    /**
+     * Listener-based user task delivery configuration.
+     */
+    @NestedConfigurationProperty
+    val listener: UserTaskListener = UserTaskListener(),
+  )
+
+  data class UserTaskListener(
+    /**
+     * User task listener job type.
+     */
+    val topic: String = "process-engine-user-tasks",
+    /**
+     * Worker id used by the listener job worker.
+     */
+    val workerId: String = "process-engine-user-tasks-worker",
+    /**
+     * Maximum listener jobs activated by the worker.
+     */
+    val maxJobsActive: Int = 32,
+    /**
+     * Enables Camunda job streaming for listener jobs.
+     */
+    val streamEnabled: Boolean = true,
+    /**
+     * Time in seconds to lock a listener job.
+     */
+    val lockTimeInSeconds: Long = 300L,
+    /**
+     * Timeout in seconds before making a retry after listener delivery failure.
+     */
+    val retryTimeoutInSeconds: Long = 5L,
+    /**
+     * Enables global listener auto-registration on startup.
+     */
+    val autoRegisterGlobalListener: Boolean = false,
+    /**
+     * Id used for global listener auto-registration.
+     */
+    val globalListenerId: String = "process-engine-user-tasks",
+    /**
+     * Number of retries configured for the global listener.
+     */
+    val globalListenerRetries: Int = 3,
+    /**
+     * Configures the global listener to run after BPMN-level listeners.
+     */
+    val globalListenerAfterNonGlobal: Boolean = true,
+    /**
+     * Priority configured for the global listener.
+     */
+    val globalListenerPriority: Int = 0,
+    /**
+     * Enables one-shot startup preload of already-created user tasks.
+     */
+    val preloadExistingTasks: Boolean = true,
   )
 
   /**
@@ -80,6 +136,11 @@ class C8AdapterProperties(
      * Subscribing using zeebe job subscriptions, extending lock times.
      */
     SUBSCRIPTION_REFRESHING,
+
+    /**
+     * Subscribing using Camunda user task listener jobs.
+     */
+    LISTENER,
 
     /**
      * Own strategy.

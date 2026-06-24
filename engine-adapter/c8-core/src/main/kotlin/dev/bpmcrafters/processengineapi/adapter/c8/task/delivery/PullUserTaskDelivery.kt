@@ -47,8 +47,6 @@ class PullUserTaskDelivery(
               val form = task.formKey?.let { camundaClient.newUserTaskGetFormRequest(task.userTaskKey).send().join() }
               val taskInformation = task.toTaskInformation(form).withReason(
                 if (deliveredTaskIds.contains(taskId) && subscriptionRepository.getActiveSubscriptionForTask(taskId) == activeSubscription) {
-                  // remove from already delivered
-                  deliveredTaskIds.remove(taskId)
                   // task was already delivered to this subscription
                   TaskInformation.UPDATE
                 } else {
@@ -56,7 +54,7 @@ class PullUserTaskDelivery(
                   TaskInformation.CREATE
                 }
               )
-
+              // remove from already delivered
               deliveredTaskIds.remove(taskId)
 
               val variableRequest = camundaClient.newUserTaskVariableSearchRequest(task.userTaskKey).apply {
@@ -83,6 +81,14 @@ class PullUserTaskDelivery(
               }
             }
         }
+      deliveredTaskIds.forEach { taskId ->
+        subscriptionRepository.getActiveSubscriptionForTask(taskId)?.let {
+          logger.trace { "PROCESS-ENGINE-C8-033: User task is gone, sending termination to the handler." }
+          it.termination.accept(TaskInformation(taskId, mapOf()).withReason(TaskInformation.DELETE))
+          subscriptionRepository.deactivateSubscriptionForTask(taskId)
+          logger.trace { "PROCESS-ENGINE-C8-034: Termination sent to handler and user task is removed." }
+        }
+      }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-035: pulling user tasks disabled, no subscriptions." }
     }
@@ -99,7 +105,7 @@ class PullUserTaskDelivery(
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == task.elementId)
       && this.restrictions
       .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
-        "workerLockDurationInMilliseconds"
+        CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS
       )
       .all {
         when (it.key) {

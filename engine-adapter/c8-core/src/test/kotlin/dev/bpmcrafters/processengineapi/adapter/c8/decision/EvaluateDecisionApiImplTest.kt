@@ -1,5 +1,6 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.decision
 
+import dev.bpmcrafters.processengineapi.CommonRestrictions
 import dev.bpmcrafters.processengineapi.decision.DecisionByRefEvaluationCommand
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.CamundaFuture
@@ -48,7 +49,7 @@ class EvaluateDecisionApiImplTest {
     assertEquals("Collect MOutput Decision", meta["decisionDefinitionName"])
     assertEquals("MainDecision", meta["decisionRequirementsId"])
     assertEquals("2251799813703258", meta["decisionRequirementsKey"])
-    assertEquals("<default>", meta["tenantId"]) // CommonRestrictions.TENANT_ID
+    assertEquals("<default>", meta[CommonRestrictions.TENANT_ID])
     assertEquals("", meta["failedDecisionId"])
     assertEquals("", meta["failureMessage"])
   }
