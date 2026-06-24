@@ -45,6 +45,7 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
       .run {
         assertThat(it).hasBean("c8-user-task-delivery")
         assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(ListenerUserTaskDelivery::class.java)
+        assertThat(it.getBean("c8-user-task-listener-preload-delivery")).isInstanceOf(PullUserTaskDelivery::class.java)
         assertThat(it.getBean("c8-user-task-completion")).isInstanceOf(C8CamundaClientUserTaskCompletionApiImpl::class.java)
         assertThat(it.getBean("c8-user-task-delivery-subscription")).isInstanceOf(UserTaskListenerDeliveryBinding::class.java)
         assertThat(it.getBean(GlobalUserTaskListenerRegistrationHelper::class.java)).isNotNull()
@@ -61,6 +62,7 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
         assertThat(it).hasBean("c8-user-task-delivery")
         assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(PullUserTaskDelivery::class.java)
         assertThat(it.getBean("c8-user-task-completion")).isInstanceOf(C8CamundaClientUserTaskCompletionApiImpl::class.java)
+        assertThat(it).doesNotHaveBean("c8-user-task-listener-preload-delivery")
         assertThat(it).doesNotHaveBean("c8-user-task-delivery-subscription")
       }
   }
@@ -76,6 +78,7 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
         assertThat(it.getBean("c8-user-task-delivery")).isInstanceOf(SubscribingRefreshingZeebeJobUserTaskDelivery::class.java)
         assertThat(it.getBean("c8-user-task-completion")).isInstanceOf(C8CamundaClientUserTaskJobCompletionApiImpl::class.java)
         assertThat(it.getBean("c8-user-task-delivery-subscription")).isInstanceOf(SubscribingUserTaskDeliveryBinding::class.java)
+        assertThat(it).doesNotHaveBean("c8-user-task-listener-preload-delivery")
       }
   }
 }

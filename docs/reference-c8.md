@@ -21,12 +21,16 @@ available in `TaskInformation.getMeta()`.
 |----------|---------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `SCHEDULED` | Periodically searches Camunda user tasks with state `CREATED`.                                                | Uses the Camunda user task search and variable search APIs. Task delivery is delayed by `schedule-delivery-fixed-rate-in-seconds`. A task is delivered with reason `create` the first time and `update` when delivered again to the same subscription. The Camunda client is fetching tasks from the secondary storage, so some delay is expected. |
 | `SUBSCRIPTION_REFRESHING` | Opens Zeebe job workers for the Legacy Camunda user task job type and refreshes the job timeout periodically. | User tasks are delivered as jobs and remain locked until completed or the lock refresh detects that the job is gone. Completion uses the job completion API. If timeout refresh returns `NOT_FOUND`, the subscription termination handler receives reason `delete`.                                                                                |
-| `LISTENER` | Opens a worker for Camunda user task listener jobs.                                                           | User task changes are delivered from task listener events. Completion uses the Camunda user task completion API.                                                                                                                                                                                                                                   |
+| `LISTENER` | Opens a worker for Camunda user task listener jobs.                                                           | User task changes are delivered from task listener events. On startup, the adapter can preload already-created native user tasks once by reusing the pull delivery search. Completion uses the Camunda user task completion API.                                                                                                                   |
 | `CUSTOM` | No built-in user task delivery or completion bean is created.                                                 | Provide your own delivery and completion implementation.                                                                                                                                                                                                                                                                                           |
 
 The listener strategy requires user task listener jobs with the configured topic. You can define these listeners in BPMN
 or enable global listener auto-registration. Auto-registration feature is supported and uses Camunda's Orchestration Cluster API and will fail
 startup if the API call fails.
+
+By default, listener delivery also performs a one-shot preload of existing native user tasks during startup. This catches
+tasks that reached `CREATED` before the listener worker opened. After that preload, `LISTENER` remains event-driven; it
+does not create a scheduled polling binding.
 
 # Configuration Overview
 
@@ -61,6 +65,7 @@ dev:
               global-listener-retries: 3
               global-listener-after-non-global: true
               global-listener-priority: 0
+              preload-existing-tasks: true
 ```
 
 | Property | Default | Description |
@@ -84,6 +89,7 @@ dev:
 | `user-tasks.listener.global-listener-retries` | `3` | Retry count configured for the global listener. |
 | `user-tasks.listener.global-listener-after-non-global` | `true` | Configures the global listener to run after BPMN-level listeners. |
 | `user-tasks.listener.global-listener-priority` | `0` | Priority configured for the global listener. |
+| `user-tasks.listener.preload-existing-tasks` | `true` | If `true`, `LISTENER` runs one startup search for already-created native user tasks before opening the listener worker. |
 
 # Message Correlation
 

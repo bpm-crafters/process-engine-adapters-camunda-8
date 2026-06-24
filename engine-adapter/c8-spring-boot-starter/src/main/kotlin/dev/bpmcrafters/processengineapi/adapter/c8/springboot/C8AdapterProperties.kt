@@ -117,6 +117,10 @@ class C8AdapterProperties(
      * Priority configured for the global listener.
      */
     val globalListenerPriority: Int = 0,
+    /**
+     * Enables one-shot startup preload of already-created user tasks.
+     */
+    val preloadExistingTasks: Boolean = true,
   )
 
   /**
