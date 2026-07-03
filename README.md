@@ -32,15 +32,55 @@ respective [repository](https://github.com/bpm-crafters/process-engine-api-docs)
 
 ## Usage
 
-If you want to start usage, please add the following dependency to your Maven project:
+If you want to start usage, please add the adapter starter to your Maven project:
 
 ```xml
 <dependency>
   <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
-  <artifactId>process-engine-adapters-camunda-platform-c8-embedded-spring-boot-starter</artifactId>
+  <artifactId>process-engine-adapter-camunda-platform-c8-spring-boot-starter</artifactId>
   <version>${process-engine-adapter-camunda-platform-c8.version}</version>
 </dependency>
 ```
+
+The adapter starter is meant to be used together with the Camunda Spring Boot starter:
+
+```xml
+<dependency>
+  <groupId>io.camunda</groupId>
+  <artifactId>camunda-spring-boot-starter</artifactId>
+</dependency>
+```
+
+For Spring Boot 3 projects, use the Spring Boot 3 Camunda starter instead:
+
+```xml
+<dependency>
+  <groupId>io.camunda</groupId>
+  <artifactId>camunda-spring-boot-3-starter</artifactId>
+</dependency>
+```
+
+For Spring Boot 3, you currently also need to add Apache HttpComponents explicitly in the versions used by the
+working `examples/java-c8-sb3` sample:
+
+```xml
+<dependency>
+  <groupId>org.apache.httpcomponents.client5</groupId>
+  <artifactId>httpclient5</artifactId>
+  <version>5.6.1</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.httpcomponents.core5</groupId>
+  <artifactId>httpcore5</artifactId>
+  <version>5.4.2</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.httpcomponents.core5</groupId>
+  <artifactId>httpcore5-h2</artifactId>
+  <version>5.4.2</version>
+</dependency>
+```
+
 ## Anatomy
 
 The library contains of the following Maven modules:
@@ -49,9 +89,8 @@ The library contains of the following Maven modules:
 - `process-engine-adapters-camunda-platform-c8-embedded-spring-boot-starter`: Camunda 8 Platform Embedded Adapter Spring Boot Starter
 - `process-engine-adapter-camunda-platform-c8-bom`: Maven BOM with providing dependencies and versions
 
-and provide other required dependencies:
-
-- `camunda-spring-boot-starter`
+and provide other required dependencies, such as `camunda-spring-boot-starter` or
+`camunda-spring-boot-3-starter`.
 
 If you want to rely on versions we used during creation of this library, you may want to import the BOM:
 
