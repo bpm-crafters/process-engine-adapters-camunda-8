@@ -49,17 +49,21 @@ class SubscribingServiceTaskDelivery(
 
   private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, camundaClient: CamundaClient) {
     if (activeSubscription.matches(job)) {
-      subscriptionRepository.activateSubscriptionForTask("${job.key}", activeSubscription)
+      val taskId = "${job.key}"
+      subscriptionRepository.activateSubscriptionForTask(taskId, activeSubscription)
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
       try {
         logger.debug { "PROCESS-ENGINE-C8-051: Delivering service task ${job.key}." }
         activeSubscription.action.accept(job.toTaskInformation().withReason(TaskInformation.CREATE), variables)
         logger.debug { "PROCESS-ENGINE-C8-052: Successfully delivered service task ${job.key}." }
       } catch (e: Exception) {
-        logger.error { "PROCESS-ENGINE-C8-051: Failing to deliver service task ${job.key}: ${e.message}." }
-        camundaClient.newFailCommand(job.key).retries(job.retries.minus(1))
-          .retryBackoff(Duration.ofSeconds(retryTimeoutInSeconds)).send().join() // could not deliver
-        subscriptionRepository.deactivateSubscriptionForTask(taskId = "${job.key}")
+        logger.error(e) { "PROCESS-ENGINE-C8-051: Failing to deliver service task ${job.key}: ${e.message}." }
+        try {
+          camundaClient.newFailCommand(job.key).retries(job.retries.minus(1))
+            .retryBackoff(Duration.ofSeconds(retryTimeoutInSeconds)).send().join() // could not deliver
+        } finally {
+          deactivateAndTerminate(taskId)
+        }
         logger.error { "PROCESS-ENGINE-C8-052: Successfully failed to deliver service task ${job.key}: ${e.message}." }
       }
     } else {
@@ -71,6 +75,16 @@ class SubscribingServiceTaskDelivery(
       logger.trace { "PROCESS-ENGINE-C8-045: Successfully returned service task ${job.key} not matching subscriptions." }
     }
 
+  }
+
+  private fun deactivateAndTerminate(taskId: String) {
+    subscriptionRepository.deactivateSubscriptionForTask(taskId)?.let {
+      try {
+        it.termination.accept(TaskInformation(taskId, mapOf()).withReason(TaskInformation.DELETE))
+      } catch (terminationError: Exception) {
+        logger.error(terminationError) { "PROCESS-ENGINE-C8-054: Failed to terminate service task ${taskId} during cleanup." }
+      }
+    }
   }
 
   /*
