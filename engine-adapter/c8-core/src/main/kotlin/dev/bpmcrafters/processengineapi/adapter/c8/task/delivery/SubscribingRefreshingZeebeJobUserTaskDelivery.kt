@@ -29,6 +29,7 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
 ) : SubscribingUserTaskDelivery, RefreshableDelivery {
 
   private var jobWorkerRegistry: Map<TaskSubscription, JobWorker> = emptyMap()
+  private val refreshMonitor = Any()
 
   fun subscribe() {
     val subscriptions = subscriptionRepository.getTaskSubscriptions().filter { s -> s.taskType == TaskType.USER }
@@ -59,20 +60,24 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
 
   private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, zeebeClient: CamundaClient) {
     if (activeSubscription.matches(job)) {
-      subscriptionRepository.activateSubscriptionForTask("${job.key}", activeSubscription)
+      val taskId = "${job.key}"
+      subscriptionRepository.activateSubscriptionForTask(taskId, activeSubscription)
       val variables = job.variablesAsMap.filterBySubscription(activeSubscription)
       try {
         logger.debug { "PROCESS-ENGINE-C8-041: Delivering user task ${job.key}." }
         activeSubscription.action.accept(job.toTaskInformation().withReason(TaskInformation.CREATE), variables)
         logger.debug { "PROCESS-ENGINE-C8-042: Successfully delivered user task ${job.key}." }
       } catch (e: Exception) {
-        logger.error { "PROCESS-ENGINE-C8-043: Failed to deliver user task ${job.key}: ${e.message}" }
-        zeebeClient
-          .newFailCommand(job.key)
-          .retries(job.retries)
-          .send()
-          .join() // could not deliver
-        subscriptionRepository.deactivateSubscriptionForTask(taskId = "${job.key}")
+        logger.error(e) { "PROCESS-ENGINE-C8-043: Failed to deliver user task ${job.key}: ${e.message}" }
+        try {
+          zeebeClient
+            .newFailCommand(job.key)
+            .retries(job.retries)
+            .send()
+            .join() // could not deliver
+        } finally {
+          deactivateAndTerminate(taskId)
+        }
       }
     } else {
       // put it back
@@ -86,7 +91,7 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
     }
   }
 
-  override fun refresh() {
+  override fun refresh() = synchronized(refreshMonitor) {
     val subscriptions = subscriptionRepository.getDeliveredTaskIds(TaskType.USER)
     logger.trace { "PROCESS-ENGINE-C8-047: refreshing user tasks for subscriptions: $subscriptions" }
     if (subscriptions.isNotEmpty()) {
@@ -102,12 +107,9 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
         } catch (e: ClientStatusException) {
           when (e.statusCode) {
             Status.Code.NOT_FOUND -> {
-              subscriptionRepository.getActiveSubscriptionForTask(taskId)?.let {
-                logger.trace { "PROCESS-ENGINE-C8-050: User task is gone, sending termination to the handler." }
-                it.termination.accept(TaskInformation(taskId, mapOf()).withReason(TaskInformation.DELETE))
-                subscriptionRepository.deactivateSubscriptionForTask(taskId)
-                logger.trace { "PROCESS-ENGINE-C8-051: Termination sent to handler and user task is removed." }
-              }
+              logger.trace { "PROCESS-ENGINE-C8-050: User task is gone, sending termination to the handler." }
+              deactivateAndTerminate(taskId)
+              logger.trace { "PROCESS-ENGINE-C8-051: Termination sent to handler and user task is removed." }
             }
 
             else -> logger.error(e) { "PROCESS-ENGINE-C8-052: Error extending job $taskId, ${e.message}." }
@@ -116,6 +118,16 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
       }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-053: not subscribing for user tasks, no active subscription found." }
+    }
+  }
+
+  private fun deactivateAndTerminate(taskId: String) {
+    subscriptionRepository.deactivateSubscriptionForTask(taskId)?.let {
+      try {
+        it.termination.accept(TaskInformation(taskId, mapOf()).withReason(TaskInformation.DELETE))
+      } catch (terminationError: Exception) {
+        logger.error(terminationError) { "PROCESS-ENGINE-C8-056: Failed to terminate user task $taskId during cleanup." }
+      }
     }
   }
 
