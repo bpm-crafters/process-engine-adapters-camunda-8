@@ -26,6 +26,12 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>dev.bpm-crafters.process-engine-examples</groupId>
       <artifactId>process-engine-api-example-java-c8-common-fixture</artifactId>
     </dependency>

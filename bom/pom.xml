@@ -31,22 +31,26 @@
       </dependency>
       <dependency>
         <groupId>io.camunda</groupId>
+        <artifactId>camunda-spring-boot-3-starter</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.camunda</groupId>
         <artifactId>camunda-client-java</artifactId>
         <version>${camunda.version}</version>
       </dependency>
       <dependency>
         <groupId>io.camunda</groupId>
-        <artifactId>camunda-spring-boot3-starter</artifactId>
+        <artifactId>camunda-process-test-spring-boot-3</artifactId>
         <version>${camunda.version}</version>
+        <scope>test</scope>
       </dependency>
-
       <dependency>
         <groupId>io.camunda</groupId>
         <artifactId>camunda-process-test-spring</artifactId>
         <version>${camunda.version}</version>
         <scope>test</scope>
       </dependency>
-
     </dependencies>
   </dependencyManagement>
 </project>

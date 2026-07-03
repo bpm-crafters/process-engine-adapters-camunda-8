@@ -19,12 +19,12 @@
 
   <properties>
     <!-- COMMON GLOBAL -->
-    <spring-boot.version>4.0.2</spring-boot.version>
     <process-engine-api.version>1.7</process-engine-api.version>
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
-    <camunda.version>8.9.9</camunda.version>
+    <camunda.version>8.9.11</camunda.version>
+    <spring-boot.version>4.1.0</spring-boot.version>
 
     <!-- TEST -->
     <mockito.version>6.3.0</mockito.version>
@@ -56,30 +56,11 @@
         <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>io.toolisticon.spring</groupId>
-        <artifactId>spring-boot-support-bom</artifactId>
-        <version>1.0.1</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${spring-boot.version}</version>
-        <scope>import</scope>
-        <type>pom</type>
-      </dependency>
-      <dependency>
         <groupId>io.camunda</groupId>
         <artifactId>camunda-bom</artifactId>
         <version>${camunda.version}</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.camunda</groupId>
-        <artifactId>camunda-spring-boot-starter</artifactId>
-        <version>${camunda.version}</version>
       </dependency>
       <dependency>
         <groupId>dev.bpm-crafters.process-engine-api</groupId>
