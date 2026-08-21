@@ -37,6 +37,10 @@ does not create a scheduled polling binding.
 Spring Boot configuration is rooted at `dev.bpm-crafters.process-api.adapter.c8`. The adapter autoconfiguration is only
 active when `enabled` is explicitly set to `true`.
 
+The same property tree applies to the Quarkus adapter (in `application.properties` form, see the
+[Quarkus quickstart](quickstart-c8-quarkus.md)). There, the properties marked as required are validated on first use
+of an adapter bean as soon as `enabled` is `true`.
+
 ```yaml
 dev:
   bpm-crafters:

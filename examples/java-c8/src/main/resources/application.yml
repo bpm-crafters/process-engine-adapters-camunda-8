@@ -5,7 +5,7 @@ springdoc:
   swagger-ui:
     try-it-out-enabled: true
   packages-to-scan:
-  - dev.bpmcrafters.example.common.adapter.in.rest
+  - dev.bpmcrafters.example.common.spring
 
 dev:
   bpm-crafters:

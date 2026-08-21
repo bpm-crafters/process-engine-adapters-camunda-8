@@ -25,12 +25,19 @@ This library provides an adapter implementation of Process Engine API for Camund
 | 2025.05.1                                                                                                     | 8.7.2             | 1.1         |
 | 2025.04.1                                                                                                     | 8.6.12            | 1.0         |
 
+Building this project requires **JDK 17 to 25** (enforced with a clear error). JDK 26+ is not supported yet, because
+JGiven/Byte Buddy stage creation breaks with Unsafe disabled by default
+([TNG/JGiven#2224](https://github.com/TNG/JGiven/issues/2224), fix merged but unreleased) and Spring Boot 3.5 /
+Quarkus 3.x support at most Java 25.
+
 ## 📚 Documentation
 
 The documentation can be found [here](https://bpm-crafters.github.io/process-engine-api-docs/stable/) or in its
 respective [repository](https://github.com/bpm-crafters/process-engine-api-docs).
 
 ## Usage
+
+### Spring Boot
 
 If you want to start usage, please add the adapter starter to your Maven project:
 
@@ -81,16 +88,39 @@ working `examples/java-c8-sb3` sample:
 </dependency>
 ```
 
+### Quarkus
+
+For Quarkus projects, add the Quarkus adapter library together with the
+[Quarkiverse Camunda extension](https://github.com/quarkiverse/quarkus-camunda), which provides the `CamundaClient`
+CDI bean and Camunda dev services:
+
+```xml
+<dependency>
+  <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
+  <artifactId>process-engine-adapter-camunda-platform-c8-quarkus</artifactId>
+  <version>${process-engine-adapter-camunda-platform-c8.version}</version>
+</dependency>
+<dependency>
+  <groupId>io.quarkiverse.camunda</groupId>
+  <artifactId>quarkus-camunda</artifactId>
+</dependency>
+```
+
+See the [Quarkus quickstart](docs/quickstart-c8-quarkus.md) for configuration and lifecycle details, and
+`examples/java-c8-quarkus` for a runnable example.
+
 ## Anatomy
 
 The library contains of the following Maven modules:
 
-- `process-engine-adapters-camunda-platform-c8-embedded-core`: Camunda 8 Platform Embedded Adapter implementation
-- `process-engine-adapters-camunda-platform-c8-embedded-spring-boot-starter`: Camunda 8 Platform Embedded Adapter Spring Boot Starter
+- `process-engine-adapter-camunda-platform-c8-core`: Camunda 8 Platform Adapter implementation
+- `process-engine-adapter-camunda-platform-c8-spring-boot-starter`: Camunda 8 Platform Adapter Spring Boot Starter
+- `process-engine-adapter-camunda-platform-c8-quarkus`: Camunda 8 Platform Adapter library for Quarkus (CDI)
+- `process-engine-adapter-camunda-platform-c8-testing`: shared test support for adapter and example tests
 - `process-engine-adapter-camunda-platform-c8-bom`: Maven BOM with providing dependencies and versions
 
-and provide other required dependencies, such as `camunda-spring-boot-starter` or
-`camunda-spring-boot-3-starter`.
+and provide other required dependencies, such as `camunda-spring-boot-starter`,
+`camunda-spring-boot-3-starter` or `quarkus-camunda`.
 
 If you want to rely on versions we used during creation of this library, you may want to import the BOM:
 

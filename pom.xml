@@ -26,6 +26,11 @@
     <camunda.version>8.9.15</camunda.version>
     <spring-boot.version>4.1.0</spring-boot.version>
 
+    <!-- QUARKUS -->
+    <quarkus.version>3.38.1</quarkus.version>
+    <quarkus-camunda.version>2.1.1</quarkus-camunda.version>
+    <jandex-maven-plugin.version>3.2.7</jandex-maven-plugin.version>
+
     <!-- TEST -->
     <mockito.version>6.3.0</mockito.version>
     <assertj.version>3.27.7</assertj.version>
@@ -42,6 +47,7 @@
     <module>engine-adapter/adapter-testing</module>
     <module>engine-adapter/c8-core</module>
     <module>engine-adapter/c8-spring-boot-starter</module>
+    <module>engine-adapter/c8-quarkus</module>
     <module>bom</module>
     <!-- more modules see profiles -->
   </modules>
@@ -179,6 +185,22 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-jdk-range</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[17,26)</version>
+                  <message>This project requires JDK 17 to 25. JDK 26+ is not supported yet: JGiven/Byte Buddy stage creation fails with Unsafe disabled by default (fix not released yet, see https://github.com/TNG/JGiven/issues/2224), and Spring Boot 3.5 / Quarkus 3.x support at most Java 25. Please switch to a JDK between 17 and 25 (e.g. in IntelliJ: Project Structure -> SDK, and the terminal's JAVA_HOME).</message>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
