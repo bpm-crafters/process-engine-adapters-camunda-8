@@ -19,11 +19,15 @@ This repository provides Camunda 8 implementations of the BPM Crafters Process E
     - `springboot/schedule`: scheduled and refreshing user-task delivery bindings.
     - `src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`: exported autoconfiguration entry point.
     - `src/test/kotlin`: Camunda process test integration tests for starter wiring and API behavior.
+  - `c8-quarkus`: CDI library (jandex-indexed, no deployment module) wiring the core adapter into Quarkus applications.
+    - `quarkus`: `@ConfigMapping` properties (same prefix as Spring), CDI producers, internal bindings holder, and the startup/shutdown lifecycle with the fixed-rate refresh scheduler.
+    - `src/test/kotlin`: unit tests plus a `@QuarkusTest` round trip against the quarkus-camunda dev services.
   - `adapter-testing`: shared JGiven, Spring, Camunda process test, Awaitility, AssertJ, and Testcontainers fixtures for adapter tests.
 - `bom`: Maven BOM that pins adapter and Camunda dependencies for consumers.
 - `examples`: Java example applications and shared fixtures.
   - `java-common-fixture`: ports, adapters, task handlers, workflow constants, and shared Spring configuration.
   - `java-c8` and `java-c8-sb3`: runnable example applications with BPMN, application profiles, Docker Compose files, HTTP demo requests, and JGiven scenario tests.
+  - `java-c8-quarkus`: runnable Quarkus example reusing the common fixture via CDI producers, with a JAX-RS resource, dev-services-based dev loop, and a `@QuarkusTest` smoke test.
 - `docs`: project documentation such as SaaS quickstart guidance.
 - `features`: project feature implementation plans, named with an issue number follwed by caption.
 - `.github/workflows`: CI and release automation; development builds run with Java 17 and `./mvnw clean verify -U -B -ntp -T4`.
@@ -44,11 +48,12 @@ This repository provides Camunda 8 implementations of the BPM Crafters Process E
 
 - Kotlin source uses two-space indentation, constructor injection, expression-bodied simple functions, and local extension functions for Camunda mapping logic.
 - Java example code uses Spring stereotypes/configuration, Lombok where already present, and ports/adapters naming under `application.port.*` and `adapter.*`.
-- Keep module boundaries intact: Camunda client translation belongs in `c8-core`; Spring bean wiring and properties belong in `c8-spring-boot-starter`; shared scenario/test helpers belong in `adapter-testing`; runnable demonstrations belong in `examples`.
+- Keep module boundaries intact: Camunda client translation belongs in `c8-core`; Spring bean wiring and properties belong in `c8-spring-boot-starter`; Quarkus/CDI wiring and properties belong in `c8-quarkus`; shared scenario/test helpers belong in `adapter-testing`; runnable demonstrations belong in `examples`.
 - Name implementation classes after the API or behavior they adapt, usually with `Impl`, `Delivery`, `Binding`, `AutoConfiguration`, `Condition`, or `Properties` suffixes.
 - Keep comments sparse and purposeful. Existing comments document configuration properties, lifecycle caveats, and known TODO/FIXME items; do not add narration for obvious code.
 - Use root-managed Maven versions. Add dependency versions to the root build or BOM when they affect published consumers; avoid hard-coded module-local versions unless the existing module already owns that concern.
 - Prefer the Maven wrapper for verification. Useful scopes include `./mvnw clean verify`, `./mvnw -pl engine-adapter/c8-core test`, and `./mvnw -pl engine-adapter/c8-spring-boot-starter test`.
+- Build with JDK 17–25 (enforced in the root pom). JDK 26+ breaks JGiven/Byte Buddy stage creation (fix unreleased, TNG/JGiven#2224) and exceeds the supported range of Spring Boot 3.5 and Quarkus 3.x; revisit the cap once a JGiven release past 2.0.3 ships.
 
 ## 5. Working Agreements
 

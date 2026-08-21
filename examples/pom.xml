@@ -27,6 +27,7 @@
     <module>java-common-fixture</module>
     <module>java-c8</module>
     <module>java-c8-sb3</module>
+    <module>java-c8-quarkus</module>
   </modules>
 
   <dependencyManagement>
