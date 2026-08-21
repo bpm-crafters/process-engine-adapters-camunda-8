@@ -21,10 +21,13 @@
     <gpg.skip>true</gpg.skip>
     <dokka.skip>true</dokka.skip>
     <springdoc-openapi-starter.version>3.0.1</springdoc-openapi-starter.version>
+    <!-- aligned with the version managed by spring-boot-dependencies used by the Spring examples -->
+    <lombok.version>1.18.46</lombok.version>
   </properties>
 
   <modules>
     <module>java-common-fixture</module>
+    <module>java-common-fixture-spring</module>
     <module>java-c8</module>
     <module>java-c8-sb3</module>
     <module>java-c8-quarkus</module>
@@ -40,6 +43,11 @@
       <dependency>
         <groupId>dev.bpm-crafters.process-engine-examples</groupId>
         <artifactId>process-engine-api-example-java-c8-common-fixture</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.bpm-crafters.process-engine-examples</groupId>
+        <artifactId>process-engine-api-example-java-c8-common-fixture-spring</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -25,7 +25,8 @@ This repository provides Camunda 8 implementations of the BPM Crafters Process E
   - `adapter-testing`: shared JGiven, Spring, Camunda process test, Awaitility, AssertJ, and Testcontainers fixtures for adapter tests.
 - `bom`: Maven BOM that pins adapter and Camunda dependencies for consumers.
 - `examples`: Java example applications and shared fixtures.
-  - `java-common-fixture`: ports, adapters, task handlers, workflow constants, and shared Spring configuration.
+  - `java-common-fixture`: framework-free ports, use cases, adapters, task handlers, and workflow constants shared by all examples (no Spring or Quarkus dependency).
+  - `java-common-fixture-spring`: Spring wiring of the fixture (autoconfiguration declaring the use cases as beans, task handler configuration, Spring MVC controller) used by the Spring examples.
   - `java-c8` and `java-c8-sb3`: runnable example applications with BPMN, application profiles, Docker Compose files, HTTP demo requests, and JGiven scenario tests.
   - `java-c8-quarkus`: runnable Quarkus example reusing the common fixture via CDI producers, with a JAX-RS resource, dev-services-based dev loop, and a `@QuarkusTest` smoke test.
 - `docs`: project documentation such as SaaS quickstart guidance.
@@ -47,7 +48,7 @@ This repository provides Camunda 8 implementations of the BPM Crafters Process E
 ## 4. Conventions
 
 - Kotlin source uses two-space indentation, constructor injection, expression-bodied simple functions, and local extension functions for Camunda mapping logic.
-- Java example code uses Spring stereotypes/configuration, Lombok where already present, and ports/adapters naming under `application.port.*` and `adapter.*`.
+- Java example code keeps the shared fixture framework-free (plain constructor-injected classes, Lombok where already present, ports/adapters naming under `application.port.*` and `adapter.*`); framework wiring lives in `java-common-fixture-spring` (Spring) and the Quarkus example's CDI producers.
 - Keep module boundaries intact: Camunda client translation belongs in `c8-core`; Spring bean wiring and properties belong in `c8-spring-boot-starter`; Quarkus/CDI wiring and properties belong in `c8-quarkus`; shared scenario/test helpers belong in `adapter-testing`; runnable demonstrations belong in `examples`.
 - Name implementation classes after the API or behavior they adapt, usually with `Impl`, `Delivery`, `Binding`, `AutoConfiguration`, `Condition`, or `Properties` suffixes.
 - Keep comments sparse and purposeful. Existing comments document configuration properties, lifecycle caveats, and known TODO/FIXME items; do not add narration for obvious code.

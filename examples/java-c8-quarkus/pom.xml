@@ -12,11 +12,6 @@
   <artifactId>process-engine-api-example-java-c8-quarkus</artifactId>
   <name>Example: Java C8 Quarkus</name>
 
-  <properties>
-    <!-- aligned with the version managed by spring-boot-dependencies used by the other examples -->
-    <lombok.version>1.18.46</lombok.version>
-  </properties>
-
   <dependencyManagement>
     <dependencies>
       <dependency>
