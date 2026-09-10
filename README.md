@@ -16,6 +16,7 @@ This library provides an adapter implementation of Process Engine API for Camund
 | Adapter-8 Version                                                                                             | Camunda 8 Version | API Version |
 |---------------------------------------------------------------------------------------------------------------|-------------------|-------------|
 | [2026.09.1](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.09.1)         | 8.9.18            | 1.7         |
+| [2026.07.1](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.06.2)         | 8.9.11            | 1.7         |
 | [2026.06.2](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.06.2)         | 8.9.9             | 1.7         |
 | [2026.06.1](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.06.1)         | 8.9.6             | 1.6         |
 | [2026.04.1](https://github.com/bpm-crafters/process-engine-adapters-camunda-8/releases/tag/2026.04.1)         | 8.8.21            | 1.5         |
