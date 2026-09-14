@@ -15,11 +15,21 @@ import java.util.Optional
  * as soon as the adapter is enabled.
  */
 @ConfigMapping(prefix = DEFAULT_PREFIX)
+// Quarkus only registers the runtime config mapping for a config class that is injected somewhere or
+// annotated here; keeping it decouples the mapping from whether an injection point survives ArC's
+// unused-bean removal.
 @Unremovable
+@ValidC8AdapterConfiguration
 interface C8AdapterProperties {
 
   companion object {
     const val DEFAULT_PREFIX = "dev.bpm-crafters.process-api.adapter.c8"
+
+    /** Full key of [ServiceTasks.deliveryStrategy], needed as a constant by the bean conditions. */
+    const val SERVICE_TASK_STRATEGY_KEY = "$DEFAULT_PREFIX.service-tasks.delivery-strategy"
+
+    /** Full key of [UserTasks.deliveryStrategy], needed as a constant by the bean conditions. */
+    const val USER_TASK_STRATEGY_KEY = "$DEFAULT_PREFIX.user-tasks.delivery-strategy"
   }
 
   /**
@@ -201,35 +211,40 @@ interface C8AdapterProperties {
      */
     CUSTOM
   }
-}
 
-/**
- * Guards adapter beans against usage while the adapter is disabled.
- */
-fun C8AdapterProperties.requireEnabled() {
-  check(enabled()) {
-    "The Camunda 8 process engine adapter is disabled. Set '$DEFAULT_PREFIX.enabled' to 'true' to activate it."
+  // The accessors below are default methods on purpose: SmallRye only treats public abstract
+  // methods as configuration properties, so these are ignored by the mapping. They unwrap the
+  // properties that [ValidC8AdapterConfiguration] guarantees for an enabled adapter, and still fail
+  // with the exact key for a programmatically built instance, which bypasses validation.
+
+  /**
+   * Guards adapter beans against usage while the adapter is disabled.
+   */
+  fun requireEnabled() {
+    check(enabled()) {
+      "The Camunda 8 process engine adapter is disabled. Set '$DEFAULT_PREFIX.enabled' to 'true' to activate it."
+    }
   }
+
+  /**
+   * Returns the configured service task delivery strategy, failing fast with the exact missing key.
+   */
+  fun requiredServiceTaskDeliveryStrategy(): ServiceTaskDeliveryStrategy =
+    serviceTasks().deliveryStrategy().orElseThrow { missingKey("service-tasks.delivery-strategy") }
+
+  /**
+   * Returns the configured service task worker id, failing fast with the exact missing key.
+   */
+  fun requiredServiceTaskWorkerId(): String =
+    serviceTasks().workerId().orElseThrow { missingKey("service-tasks.worker-id") }
+
+  /**
+   * Returns the configured user task delivery strategy, failing fast with the exact missing key.
+   */
+  fun requiredUserTaskDeliveryStrategy(): UserTaskDeliveryStrategy =
+    userTasks().deliveryStrategy().orElseThrow { missingKey("user-tasks.delivery-strategy") }
+
+  private fun missingKey(key: String) = IllegalStateException(
+    "The Camunda 8 process engine adapter is enabled but '$DEFAULT_PREFIX.$key' is not set."
+  )
 }
-
-/**
- * Returns the configured service task delivery strategy, failing fast with the exact missing key.
- */
-fun C8AdapterProperties.requiredServiceTaskDeliveryStrategy(): C8AdapterProperties.ServiceTaskDeliveryStrategy =
-  serviceTasks().deliveryStrategy().orElseThrow { missingKey("service-tasks.delivery-strategy") }
-
-/**
- * Returns the configured service task worker id, failing fast with the exact missing key.
- */
-fun C8AdapterProperties.requiredServiceTaskWorkerId(): String =
-  serviceTasks().workerId().orElseThrow { missingKey("service-tasks.worker-id") }
-
-/**
- * Returns the configured user task delivery strategy, failing fast with the exact missing key.
- */
-fun C8AdapterProperties.requiredUserTaskDeliveryStrategy(): C8AdapterProperties.UserTaskDeliveryStrategy =
-  userTasks().deliveryStrategy().orElseThrow { missingKey("user-tasks.delivery-strategy") }
-
-private fun missingKey(key: String) = IllegalStateException(
-  "The Camunda 8 process engine adapter is enabled but '$DEFAULT_PREFIX.$key' is not set."
-)

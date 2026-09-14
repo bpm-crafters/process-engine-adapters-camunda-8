@@ -66,6 +66,13 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Compile scope on purpose: without a ConfigValidator on the classpath SmallRye falls back to
+         ConfigValidator.EMPTY and every constraint on the config mapping is silently ignored. -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-validator</artifactId>
+    </dependency>
+
     <!-- Testing -->
     <dependency>
       <groupId>io.quarkus</groupId>
