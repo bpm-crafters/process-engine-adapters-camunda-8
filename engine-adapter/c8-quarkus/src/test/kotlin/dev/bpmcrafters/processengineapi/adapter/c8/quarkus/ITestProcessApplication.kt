@@ -28,7 +28,7 @@ class ITestProcessApplication(
   val completedServiceTaskIds = CopyOnWriteArrayList<String>()
   val userTaskSupport = UserTaskSupport()
 
-  fun onStart(@Suppress("UNUSED_PARAMETER") @Observes event: StartupEvent) {
+  fun onStart(@Observes ignore: StartupEvent) {
     taskSubscriptionApi.subscribeForTask(
       SubscribeForTaskCmd(
         CommonRestrictions.builder().build(),

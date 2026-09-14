@@ -28,11 +28,11 @@ import jakarta.inject.Singleton
 class C8CamundaClientProducers {
 
   /**
-   * Fallback client producer keeping the build-time bean resolution satisfied when no real
-   * [CamundaClient] bean is present. The producer body only runs on first actual client usage,
-   * turning a missing client into an actionable runtime error instead of a cryptic ArC build
-   * failure. A client provided by the quarkus-camunda extension or the application takes
-   * precedence.
+   * Deliberate fallback so that an application without a [CamundaClient] bean still builds: the
+   * adapter declares `camunda-client-java` as `provided` and expects the client to come from the
+   * quarkus-camunda extension or from the application, either of which takes precedence over this
+   * default bean. The producer body only runs on first actual client usage, turning a missing
+   * client into an actionable runtime message instead of a cryptic ArC build failure.
    */
   @Produces
   @ApplicationScoped

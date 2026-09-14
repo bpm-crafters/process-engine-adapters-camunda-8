@@ -79,6 +79,13 @@ class C8AdapterBindingsTest {
   }
 
   @Test
+  fun `close without start does not construct the listener delivery`() {
+    val bindings = bindings(testProperties(userTaskDeliveryStrategy = UserTaskDeliveryStrategy.LISTENER))
+    assertThatCode { bindings.close() }.doesNotThrowAnyException()
+    verify { camundaClient wasNot Called }
+  }
+
+  @Test
   fun `missing service task delivery strategy fails on start`() {
     val bindings = bindings(testProperties(serviceTaskDeliveryStrategy = null))
     assertThatThrownBy { bindings.start() }

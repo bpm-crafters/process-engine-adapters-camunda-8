@@ -28,21 +28,19 @@ class C8AdapterBindings(
   private val properties: C8AdapterProperties
 ) {
 
-  private val serviceTaskDeliveryLazy = lazy {
-    when (properties.requiredServiceTaskDeliveryStrategy()) {
-      ServiceTaskDeliveryStrategy.SUBSCRIPTION -> SubscribingServiceTaskDelivery(
-        camundaClient = camundaClient,
-        subscriptionRepository = subscriptionRepository,
-        workerId = properties.requiredServiceTaskWorkerId(),
-        retryTimeoutInSeconds = properties.serviceTasks().retryTimeoutInSeconds(),
-        lockDurationInSeconds = properties.serviceTasks().lockTimeInSeconds()
-      )
-
-      ServiceTaskDeliveryStrategy.CUSTOM -> null
-    }
+  private val serviceTaskDelivery by lazy {
+    SubscribingServiceTaskDelivery(
+      camundaClient = camundaClient,
+      subscriptionRepository = subscriptionRepository,
+      workerId = properties.requiredServiceTaskWorkerId(),
+      retryTimeoutInSeconds = properties.serviceTasks().retryTimeoutInSeconds(),
+      lockDurationInSeconds = properties.serviceTasks().lockTimeInSeconds()
+    )
   }
 
-  private val refreshingUserTaskDeliveryLazy = lazy {
+  // SUBSCRIPTION_REFRESHING serves both the subscribing and the refreshable role; the caching of
+  // `by lazy` keeps that a single instance, the one whose job workers are actually open.
+  private val refreshingUserTaskDelivery by lazy {
     SubscribingRefreshingZeebeJobUserTaskDelivery(
       camundaClient = camundaClient,
       subscriptionRepository = subscriptionRepository,
@@ -51,14 +49,14 @@ class C8AdapterBindings(
     )
   }
 
-  private val pullUserTaskDeliveryLazy = lazy {
+  private val pullUserTaskDelivery by lazy {
     PullUserTaskDelivery(
       camundaClient = camundaClient,
       subscriptionRepository = subscriptionRepository
     )
   }
 
-  private val listenerUserTaskDeliveryLazy = lazy {
+  private val listenerUserTaskDelivery by lazy {
     val listener = properties.userTasks().listener()
     ListenerUserTaskDelivery(
       camundaClient = camundaClient,
@@ -72,7 +70,7 @@ class C8AdapterBindings(
     )
   }
 
-  private val globalUserTaskListenerRegistrationHelperLazy = lazy {
+  private val globalUserTaskListenerRegistrationHelper by lazy {
     val listener = properties.userTasks().listener()
     GlobalUserTaskListenerRegistrationHelper(
       camundaClient = camundaClient,
@@ -86,12 +84,19 @@ class C8AdapterBindings(
   }
 
   /**
+   * Delivery that was actually subscribed and needs to be closed on shutdown. Written on the
+   * subscribing thread, read on the shutdown thread.
+   */
+  @Volatile
+  private var startedListenerDelivery: AutoCloseable? = null
+
+  /**
    * User task delivery handed over to the task subscription api, present for subscribing strategies.
    */
   val subscribingUserTaskDelivery: SubscribingUserTaskDelivery?
     get() = when (properties.requiredUserTaskDeliveryStrategy()) {
-      UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING -> refreshingUserTaskDeliveryLazy.value
-      UserTaskDeliveryStrategy.LISTENER -> listenerUserTaskDeliveryLazy.value
+      UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING -> refreshingUserTaskDelivery
+      UserTaskDeliveryStrategy.LISTENER -> listenerUserTaskDelivery
       UserTaskDeliveryStrategy.SCHEDULED, UserTaskDeliveryStrategy.CUSTOM -> null
     }
 
@@ -100,8 +105,8 @@ class C8AdapterBindings(
    */
   val refreshableUserTaskDelivery: RefreshableDelivery?
     get() = when (properties.requiredUserTaskDeliveryStrategy()) {
-      UserTaskDeliveryStrategy.SCHEDULED -> pullUserTaskDeliveryLazy.value
-      UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING -> refreshingUserTaskDeliveryLazy.value
+      UserTaskDeliveryStrategy.SCHEDULED -> pullUserTaskDelivery
+      UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING -> refreshingUserTaskDelivery
       UserTaskDeliveryStrategy.LISTENER, UserTaskDeliveryStrategy.CUSTOM -> null
     }
 
@@ -120,7 +125,7 @@ class C8AdapterBindings(
     when (properties.requiredServiceTaskDeliveryStrategy()) {
       ServiceTaskDeliveryStrategy.SUBSCRIPTION -> {
         logger.trace { "PROCESS-ENGINE-C8-100: Subscribing to service tasks..." }
-        serviceTaskDeliveryLazy.value?.subscribe()
+        serviceTaskDelivery.subscribe()
         logger.trace { "PROCESS-ENGINE-C8-101: Subscribed to service tasks." }
       }
 
@@ -135,25 +140,26 @@ class C8AdapterBindings(
     when (properties.requiredUserTaskDeliveryStrategy()) {
       UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING -> {
         logger.trace { "PROCESS-ENGINE-C8-102: Subscribing to user tasks..." }
-        refreshingUserTaskDeliveryLazy.value.subscribe()
+        refreshingUserTaskDelivery.subscribe()
         logger.trace { "PROCESS-ENGINE-C8-103: Subscribed to user tasks." }
       }
 
       UserTaskDeliveryStrategy.LISTENER -> {
         logger.trace { "PROCESS-ENGINE-C8-111: Registering global user task listener if enabled..." }
-        globalUserTaskListenerRegistrationHelperLazy.value.registerIfEnabled()
+        globalUserTaskListenerRegistrationHelper.registerIfEnabled()
         logger.trace { "PROCESS-ENGINE-C8-112: Global user task listener registration checked." }
         if (properties.userTasks().listener().preloadExistingTasks()) {
           try {
             logger.trace { "PROCESS-ENGINE-C8-113: Preloading existing user tasks for listener delivery..." }
-            pullUserTaskDeliveryLazy.value.refresh()
+            pullUserTaskDelivery.refresh()
             logger.trace { "PROCESS-ENGINE-C8-114: Preloaded existing user tasks for listener delivery." }
           } catch (e: Exception) {
             logger.error(e) { "PROCESS-ENGINE-C8-115: Failed to preload existing user tasks for listener delivery." }
           }
         }
         logger.trace { "PROCESS-ENGINE-C8-104: Subscribing to user task listener jobs..." }
-        listenerUserTaskDeliveryLazy.value.subscribe()
+        listenerUserTaskDelivery.subscribe()
+        startedListenerDelivery = listenerUserTaskDelivery
         logger.trace { "PROCESS-ENGINE-C8-105: Subscribed to user task listener jobs." }
       }
 
@@ -162,11 +168,10 @@ class C8AdapterBindings(
   }
 
   /**
-   * Closes deliveries holding resources. Only deliveries that were actually constructed are closed.
+   * Closes deliveries holding resources. Only deliveries that were actually subscribed are closed.
    */
   fun close() {
-    if (listenerUserTaskDeliveryLazy.isInitialized()) {
-      listenerUserTaskDeliveryLazy.value.close()
-    }
+    startedListenerDelivery?.close()
+    startedListenerDelivery = null
   }
 }

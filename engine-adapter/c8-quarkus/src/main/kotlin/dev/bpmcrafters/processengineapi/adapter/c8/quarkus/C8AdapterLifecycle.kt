@@ -15,6 +15,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 private val logger = KotlinLogging.logger {}
 
@@ -30,14 +31,14 @@ class C8AdapterLifecycle(
   private val bindings: Instance<C8AdapterBindings>
 ) {
 
-  private var scheduler: ScheduledExecutorService? = null
+  private val scheduler = AtomicReference<ScheduledExecutorService?>()
 
   /**
    * Runs after application startup observers with default priority, so applications can register
    * their task subscriptions in an own [StartupEvent] observer before the deliveries subscribe —
    * the equivalent of registering handlers during bean initialization with the Spring Boot starter.
    */
-  fun onStart(@Suppress("UNUSED_PARAMETER") @Observes @Priority(Interceptor.Priority.APPLICATION + 900) event: StartupEvent) {
+  fun onStart(@Observes @Priority(Interceptor.Priority.APPLICATION + 900) ignore: StartupEvent) {
     if (!properties.enabled()) {
       logger.debug { "PROCESS-ENGINE-C8-120: C8 adapter is disabled, skipping lifecycle bindings." }
       return
@@ -54,40 +55,39 @@ class C8AdapterLifecycle(
     }
     val adapterBindings = bindings.get()
     val executor = Executors.newScheduledThreadPool(2, SchedulerThreadFactory())
-    scheduler = executor
+    scheduler.set(executor)
     // subscribe service and user task deliveries independently, mirroring the separate
     // @Async event listeners of the Spring Boot starter
     executor.execute {
       try {
         adapterBindings.startServiceTasks()
-      } catch (e: Throwable) {
+      } catch (e: Exception) {
         logger.error(e) { "PROCESS-ENGINE-C8-121: Failed to subscribe service task delivery on startup." }
       }
     }
     executor.execute {
       try {
         adapterBindings.startUserTasks()
-      } catch (e: Throwable) {
+      } catch (e: Exception) {
         logger.error(e) { "PROCESS-ENGINE-C8-128: Failed to subscribe user task delivery on startup." }
       }
     }
     adapterBindings.refreshableUserTaskDelivery?.let { delivery ->
       val fixedRateInSeconds = properties.userTasks().scheduleDeliveryFixedRateInSeconds()
-      val refreshing = userTaskStrategy == UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
+      val (startMessage, doneMessage) = if (userTaskStrategy == UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING) {
+        "PROCESS-ENGINE-C8-124: Refreshing user tasks..." to "PROCESS-ENGINE-C8-125: Refreshed user tasks."
+      } else {
+        "PROCESS-ENGINE-C8-126: Delivering user tasks..." to "PROCESS-ENGINE-C8-127: Delivered user tasks."
+      }
       executor.scheduleAtFixedRate(
         {
           try {
-            if (refreshing) {
-              logger.trace { "PROCESS-ENGINE-C8-124: Refreshing user tasks..." }
-              delivery.refresh()
-              logger.trace { "PROCESS-ENGINE-C8-125: Refreshed user tasks." }
-            } else {
-              logger.trace { "PROCESS-ENGINE-C8-126: Delivering user tasks..." }
-              delivery.refresh()
-              logger.trace { "PROCESS-ENGINE-C8-127: Delivered user tasks." }
-            }
-          } catch (e: Throwable) {
-            // catch everything, an escaping throwable would cancel the periodic task silently
+            logger.trace { startMessage }
+            delivery.refresh()
+            logger.trace { doneMessage }
+          } catch (e: Exception) {
+            // an escaping exception would cancel the periodic task silently; an Error is left to
+            // propagate deliberately
             if (executor.isShutdown) {
               logger.debug(e) { "PROCESS-ENGINE-C8-122: User task refresh interrupted during shutdown." }
             } else {
@@ -102,13 +102,12 @@ class C8AdapterLifecycle(
     }
   }
 
-  fun onStop(@Suppress("UNUSED_PARAMETER") @Observes event: ShutdownEvent) {
-    val executor = scheduler ?: return
-    scheduler = null
+  fun onStop(@Observes ignore: ShutdownEvent) {
+    val executor = scheduler.getAndSet(null) ?: return
     executor.shutdownNow()
     try {
       executor.awaitTermination(5, TimeUnit.SECONDS)
-    } catch (e: InterruptedException) {
+    } catch (_: InterruptedException) {
       Thread.currentThread().interrupt()
     }
     try {

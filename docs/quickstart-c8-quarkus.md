@@ -54,8 +54,9 @@ All beans are lazy. If the adapter is disabled (`enabled` is `false` or not set)
 using one of the adapter beans fails with a message naming the `enabled` property. The three properties that are
 required by the Spring Boot starter (`service-tasks.delivery-strategy`, `service-tasks.worker-id`,
 `user-tasks.delivery-strategy`) are validated on startup as soon as the adapter is enabled — a missing key aborts the
-startup like Spring's configuration binding error. Without any `CamundaClient` bean on the classpath the application
-still builds; using the adapter then fails with a message pointing to the quarkus-camunda extension.
+startup like Spring's configuration binding error — and again on first use of an adapter bean. Without any
+`CamundaClient` bean on the classpath the application still builds; using the adapter then fails with a message
+pointing to the quarkus-camunda extension.
 
 ## Task handler registration
 

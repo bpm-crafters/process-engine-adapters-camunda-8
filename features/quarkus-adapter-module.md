@@ -49,8 +49,8 @@ New log ids: `120` (disabled, lifecycle skipped), `121` (startup subscription fa
 `204` (Quarkus wiring config report). Ids `100–115` are reused verbatim from the Spring bindings.
 
 Versions are pinned in the root pom: `quarkus.version=3.38.1` (the version quarkus-camunda 2.1.1 is built against)
-and `quarkus-camunda.version=2.1.1` (which uses the identical `io.camunda:camunda-client-java:8.9.14` as
-`camunda.version`). The BOM manages the new artifact and `quarkus-camunda`.
+and `quarkus-camunda.version=2.1.1` (which resolves `io.camunda:camunda-client-java` from the same
+`camunda.version` the rest of the project uses). The BOM manages the new artifact and `quarkus-camunda`.
 
 Known limitations, matching Spring behavior where noted:
 
