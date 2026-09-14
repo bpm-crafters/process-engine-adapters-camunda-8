@@ -13,7 +13,7 @@ available in `TaskInformation.getMeta()`.
 | Strategy | Implementation | Impact |
 |----------|----------------|--------|
 | `SUBSCRIPTION` | Opens Camunda job workers for `TaskType.EXTERNAL` subscriptions. The subscription `taskDescriptionKey` is used as the job type. | Service tasks are pushed by Camunda jobs. Payload variables are fetched according to the subscription `payloadDescription`. `workerLockDurationInMilliseconds` can override the configured worker lock time per subscription. |
-| `CUSTOM` | No built-in service task delivery bean is created. | Provide your own delivery implementation and subscribe it yourself; the adapter constructs nothing and never touches the Camunda client for service tasks. The default service task completion API is still available unless you replace it with your own bean. |
+| `CUSTOM` | No built-in service task delivery bean is created. | Provide your own delivery implementation and subscribe it yourself; the adapter constructs nothing and never touches the Camunda client for service tasks. The default service task completion API is still available unless you replace it with your own bean. With Quarkus, no producer matches the strategy, so no bean exists at all. |
 
 ## User Tasks
 
@@ -38,9 +38,9 @@ Spring Boot configuration is rooted at `dev.bpm-crafters.process-api.adapter.c8`
 active when `enabled` is explicitly set to `true`.
 
 The same property tree applies to the Quarkus adapter (in `application.properties` form, see the
-[Quarkus quickstart](quickstart-c8-quarkus.md)). There, as soon as `enabled` is `true`, the properties marked as
-required are validated on startup by the adapter lifecycle observer — a missing key aborts the startup — and again on
-first use of an adapter bean.
+[Quarkus quickstart](quickstart-c8-quarkus.md)). There the configuration is checked by Bean Validation when it is
+bound: value constraints always apply, and the properties marked as required are enforced as soon as `enabled` is
+`true`.
 
 ```yaml
 dev:

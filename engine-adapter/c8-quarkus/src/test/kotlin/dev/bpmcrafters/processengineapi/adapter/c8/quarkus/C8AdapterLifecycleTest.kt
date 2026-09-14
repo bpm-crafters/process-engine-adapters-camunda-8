@@ -16,14 +16,24 @@ import org.junit.jupiter.api.Test
 
 class C8AdapterLifecycleTest {
 
-  private val bindings = mockk<C8AdapterBindings>(relaxed = true)
+  private val bindings = mockk<C8AdapterBindings>(relaxed = true).also {
+    every { it.hasServiceTaskDelivery() } returns true
+    every { it.hasUserTaskDelivery() } returns true
+  }
   private val bindingsInstance = mockk<Instance<C8AdapterBindings>>().also {
     every { it.get() } returns bindings
   }
 
+  private fun refreshableHandle(delivery: RefreshableDelivery?): Instance<RefreshableDelivery> = mockk {
+    every { isResolvable } returns (delivery != null)
+    if (delivery != null) {
+      every { get() } returns delivery
+    }
+  }
+
   @Test
   fun `skips lifecycle bindings for disabled adapter`() {
-    val lifecycle = C8AdapterLifecycle(testProperties(adapterEnabled = false), bindingsInstance)
+    val lifecycle = C8AdapterLifecycle(testProperties(adapterEnabled = false), bindingsInstance, refreshableHandle(null))
 
     lifecycle.onStart(StartupEvent())
     lifecycle.onStop(ShutdownEvent())
@@ -35,8 +45,11 @@ class C8AdapterLifecycleTest {
   @Test
   fun `starts bindings and refreshes delivery at fixed rate`() {
     val delivery = mockk<RefreshableDelivery>(relaxed = true)
-    every { bindings.refreshableUserTaskDelivery } returns delivery
-    val lifecycle = C8AdapterLifecycle(testProperties(fixedRateInSeconds = 1), bindingsInstance)
+    val lifecycle = C8AdapterLifecycle(
+      testProperties(fixedRateInSeconds = 1),
+      bindingsInstance,
+      refreshableHandle(delivery)
+    )
 
     lifecycle.onStart(StartupEvent())
 
@@ -51,10 +64,10 @@ class C8AdapterLifecycleTest {
 
   @Test
   fun `starts bindings without scheduling refresh for listener strategy`() {
-    every { bindings.refreshableUserTaskDelivery } returns null
     val lifecycle = C8AdapterLifecycle(
       testProperties(userTaskDeliveryStrategy = UserTaskDeliveryStrategy.LISTENER),
-      bindingsInstance
+      bindingsInstance,
+      refreshableHandle(null)
     )
 
     lifecycle.onStart(StartupEvent())
@@ -69,9 +82,8 @@ class C8AdapterLifecycleTest {
 
   @Test
   fun `subscribes user tasks even if service task subscription fails`() {
-    every { bindings.refreshableUserTaskDelivery } returns null
     every { bindings.startServiceTasks() } throws IllegalStateException("boom")
-    val lifecycle = C8AdapterLifecycle(testProperties(), bindingsInstance)
+    val lifecycle = C8AdapterLifecycle(testProperties(), bindingsInstance, refreshableHandle(null))
 
     lifecycle.onStart(StartupEvent())
 
@@ -83,21 +95,21 @@ class C8AdapterLifecycleTest {
   @Test
   fun `fails startup when required service task configuration is missing`() {
     assertThatThrownBy {
-      C8AdapterLifecycle(testProperties(serviceTaskDeliveryStrategy = null), bindingsInstance)
+      C8AdapterLifecycle(testProperties(serviceTaskDeliveryStrategy = null), bindingsInstance, refreshableHandle(null))
         .onStart(StartupEvent())
     }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("service-tasks.delivery-strategy")
 
     assertThatThrownBy {
-      C8AdapterLifecycle(testProperties(serviceTaskWorkerId = null), bindingsInstance)
+      C8AdapterLifecycle(testProperties(serviceTaskWorkerId = null), bindingsInstance, refreshableHandle(null))
         .onStart(StartupEvent())
     }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("service-tasks.worker-id")
 
     assertThatThrownBy {
-      C8AdapterLifecycle(testProperties(userTaskDeliveryStrategy = null), bindingsInstance)
+      C8AdapterLifecycle(testProperties(userTaskDeliveryStrategy = null), bindingsInstance, refreshableHandle(null))
         .onStart(StartupEvent())
     }
       .isInstanceOf(IllegalStateException::class.java)
@@ -108,14 +120,14 @@ class C8AdapterLifecycleTest {
 
   @Test
   fun `does not require a worker id for custom service task delivery`() {
-    every { bindings.refreshableUserTaskDelivery } returns null
     val lifecycle = C8AdapterLifecycle(
       testProperties(
         serviceTaskDeliveryStrategy = ServiceTaskDeliveryStrategy.CUSTOM,
         serviceTaskWorkerId = null,
         userTaskDeliveryStrategy = UserTaskDeliveryStrategy.SCHEDULED
       ),
-      bindingsInstance
+      bindingsInstance,
+      refreshableHandle(null)
     )
 
     assertThatCode { lifecycle.onStart(StartupEvent()) }.doesNotThrowAnyException()

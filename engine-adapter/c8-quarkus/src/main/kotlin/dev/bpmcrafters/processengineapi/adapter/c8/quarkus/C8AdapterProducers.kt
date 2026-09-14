@@ -5,6 +5,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.task.SubscribingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
 import dev.bpmcrafters.processengineapi.correlation.SignalApi
@@ -17,6 +18,7 @@ import dev.bpmcrafters.processengineapi.task.TaskSubscriptionApi
 import io.camunda.client.CamundaClient
 import io.quarkus.arc.DefaultBean
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.inject.Instance
 import jakarta.enterprise.inject.Produces
 import jakarta.inject.Singleton
 
@@ -38,17 +40,21 @@ class C8AdapterProducers {
     )
   }
 
+  /**
+   * The core api takes a nullable delivery and only uses it to close jobs on unsubscribe; the
+   * `SCHEDULED` and `CUSTOM` strategies have none, exactly as in the Spring Boot starter.
+   */
   @Produces
   @ApplicationScoped
   fun taskSubscriptionApi(
     subscriptionRepository: SubscriptionRepository,
-    bindings: C8AdapterBindings,
+    subscribingUserTaskDelivery: Instance<SubscribingUserTaskDelivery>,
     properties: C8AdapterProperties
   ): TaskSubscriptionApi {
     properties.requireEnabled()
     return C8TaskSubscriptionApiImpl(
       subscriptionRepository = subscriptionRepository,
-      subscribingUserTaskDelivery = bindings.subscribingUserTaskDelivery
+      subscribingUserTaskDelivery = subscribingUserTaskDelivery.takeIf { it.isResolvable }?.get()
     )
   }
 

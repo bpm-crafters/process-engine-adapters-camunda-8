@@ -27,18 +27,22 @@ in `examples/java-c8-quarkus`.
 
 The module is a plain CDI library (jandex-indexed via `io.smallrye:jandex-maven-plugin`), not a runtime/deployment
 Quarkus extension: it only produces beans from framework-free core classes and needs no annotation discovery, build
-steps, or recorders. All Quarkus dependencies (`quarkus-arc`, `quarkus-core`, `smallrye-config`) are `provided`; the
-consuming application's `quarkus-bom` decides the versions.
+steps, or recorders. The Quarkus dependencies (`quarkus-arc`, `quarkus-core`, `smallrye-config`) are `provided`; the
+consuming application's `quarkus-bom` decides the versions. The one exception is `quarkus-hibernate-validator`, which
+is a compile dependency because SmallRye silently skips every constraint when no `ConfigValidator` is on the
+classpath.
 
 The Spring starter's classes map to Quarkus counterparts in `dev.bpmcrafters.processengineapi.adapter.c8.quarkus`:
 
 | Spring Boot starter | c8-quarkus | Mechanism |
 |---|---|---|
-| `C8AdapterProperties` (`@ConfigurationProperties`) | `C8AdapterProperties` | `@ConfigMapping` interface, same prefix `dev.bpm-crafters.process-api.adapter.c8`, `@Unremovable`; Spring-required properties are `Optional` and validated once the adapter is enabled |
+| `C8AdapterProperties` (`@ConfigurationProperties`) | `C8AdapterProperties` | `@ConfigMapping` interface, same prefix `dev.bpm-crafters.process-api.adapter.c8`, `@Unremovable`; Bean Validation constraints on the values plus a `@ValidC8AdapterConfiguration` class level constraint for the properties that are only required once `enabled` is `true` (they stay `Optional` because the mapping is bound even for a disabled adapter). The `required*()` unwrapping accessors are interface default methods, which SmallRye does not treat as properties |
 | `C8AdapterEnabledCondition` | `requireEnabled()` in producers | beans exist but fail fast on first use when disabled (`enabled` defaults to `false`) |
 | `C8AdapterAutoConfiguration` | `C8AdapterProducers` | producer methods with interface return types (ArC client proxies work on the interface, so final Kotlin impl classes are fine) |
-| `C8CamundaClientAutoConfiguration` + `@ConditionalOn*Strategy` | `C8CamundaClientProducers` + `C8AdapterBindings` | runtime switch on the configured strategy instead of conditional beans; `C8AdapterBindings` is an internal `@Singleton` holder building deliveries lazily |
-| `C8SubscriptionAutoConfiguration` bindings (`@EventListener @Async` on `ApplicationStartedEvent`) | `C8AdapterLifecycle.onStart` | `@Observes StartupEvent` at `@Priority(APPLICATION + 900)`, so applications register task subscriptions in own startup observers (default priority) before the deliveries subscribe; subscription runs async on the adapter scheduler |
+| `C8CamundaClientAutoConfiguration` + `@ConditionalOn*Strategy` (delivery beans) | `C8TaskDeliveryProducers` | one producer per strategy, guarded by `@LookupIfProperty` with `StringValueMatch.REGEX`. `CUSTOM` and an unset key match nothing, so no bean exists — the CDI equivalent of Spring's bean absence. The conditions are regular expressions because `@LookupIfProperty` compares the raw property string while the config mapping converts the enum, and an equality match would miss `subscription-refreshing`. `C8AdapterLifecycle` cross-checks the two on startup (log id `129`) |
+| `C8SubscriptionAutoConfiguration` bindings | `C8AdapterBindings` | an internal `@Singleton` that only decides what to call on the deliveries it is given; the deliveries arrive as `Instance` handles, which is also where the nullability of `subscribingUserTaskDelivery` now comes from |
+| `C8CamundaClientAutoConfiguration` (completion and modification apis) | `C8CamundaClientProducers` | still a runtime switch behind a single `@DefaultBean` producer. These types are injected directly by applications, and two producers of one type would be an ambiguous dependency at build time whatever the lookup condition says |
+| `C8SubscriptionAutoConfiguration` startup (`@EventListener @Async` on `ApplicationStartedEvent`) | `C8AdapterLifecycle.onStart` | `@Observes StartupEvent` at `@Priority(APPLICATION + 900)`, so applications register task subscriptions in own startup observers (default priority) before the deliveries subscribe; subscription runs async on the adapter scheduler |
 | `C8SchedulingAutoConfiguration` (`ThreadPoolTaskScheduler`, `SchedulingConfigurer`) | `C8AdapterLifecycle` | plain `ScheduledExecutorService` (2 threads, `C8REMOTE-SCHEDULER-*`), fixed-rate `refresh()` for `SCHEDULED`/`SUBSCRIPTION_REFRESHING`; no quarkus-scheduler dependency forced on consumers |
 
 Overridable beans (`SubscriptionRepository`, `EvaluateDecisionApi`, `FailureRetrySupplier`, completion and
@@ -46,6 +50,7 @@ modification apis) are `@io.quarkus.arc.DefaultBean` — the CDI analog of `@Con
 
 New log ids: `120` (disabled, lifecycle skipped), `121` (startup subscription failed), `122` (refresh failed),
 `123` (lifecycle stopped), `124/125` (refreshing user tasks tick), `126/127` (delivering user tasks tick),
+`128` (user task subscription failed), `129` (configured strategy produced no delivery bean),
 `204` (Quarkus wiring config report). Ids `100–115` are reused verbatim from the Spring bindings.
 
 Versions are pinned in the root pom: `quarkus.version=3.38.1` (the version quarkus-camunda 2.1.1 is built against)

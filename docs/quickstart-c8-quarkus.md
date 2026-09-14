@@ -51,12 +51,16 @@ Beans marked as default beans (`SubscriptionRepository`, `EvaluateDecisionApi`, 
 completion/modification apis) can be replaced by providing an own bean of the same type.
 
 All beans are lazy. If the adapter is disabled (`enabled` is `false` or not set), the application still starts, but
-using one of the adapter beans fails with a message naming the `enabled` property. The three properties that are
-required by the Spring Boot starter (`service-tasks.delivery-strategy`, `service-tasks.worker-id`,
-`user-tasks.delivery-strategy`) are validated on startup as soon as the adapter is enabled — a missing key aborts the
-startup like Spring's configuration binding error — and again on first use of an adapter bean. Without any
-`CamundaClient` bean on the classpath the application still builds; using the adapter then fails with a message
-pointing to the quarkus-camunda extension.
+using one of the adapter beans fails with a message naming the `enabled` property.
+
+The configuration is checked by Bean Validation when it is bound. Value constraints (positive timeouts, non-blank
+topic and worker ids, at least one active listener job) always apply. The three properties that are required by the
+Spring Boot starter (`service-tasks.delivery-strategy`, `service-tasks.worker-id`, `user-tasks.delivery-strategy`) are
+required only once `enabled` is `true`, which a plain `@NotNull` cannot express — the mapping is bound on every start,
+including when the adapter is disabled. A class level constraint covers that and reports every missing key at once.
+
+Without any `CamundaClient` bean on the classpath the application still builds; using the adapter then fails with a
+message pointing to the quarkus-camunda extension.
 
 ## Task handler registration
 
@@ -92,6 +96,25 @@ there.
 For the `SCHEDULED` and `SUBSCRIPTION_REFRESHING` user task delivery strategies, the adapter runs a small dedicated
 scheduler (thread names `C8REMOTE-SCHEDULER-*`), so no quarkus-scheduler extension is required.
 
+## Providing your own task delivery
+
+With `CUSTOM` the adapter produces no delivery bean for that task type, so the application owns the delivery and
+subscribes it itself. The other strategies produce exactly one delivery bean each, selected from the configured
+strategy at runtime.
+
+Those delivery beans are only reachable through programmatic lookup, because their condition is evaluated at runtime:
+
+```java
+@Inject Instance<SubscribingUserTaskDelivery> userTaskDelivery;   // resolvable for SUBSCRIPTION_REFRESHING, LISTENER
+@Inject Instance<RefreshableDelivery> refreshableDelivery;        // resolvable for SUBSCRIPTION_REFRESHING, SCHEDULED
+```
+
+Injecting one of those types directly, without `Instance`, is an ambiguous dependency and fails the build. The
+completion and modification apis are unaffected — those stay ordinary injectable beans.
+
+Write the strategy value the way the enum constant reads. Lower case and hyphenated spellings are accepted, but if a
+value ever binds without producing a delivery, startup fails with `PROCESS-ENGINE-C8-129` naming the property.
+
 ## Camunda client configuration
 
 The `CamundaClient` is configured entirely through the quarkus-camunda extension (`quarkus.camunda.*` properties):
@@ -124,6 +147,10 @@ The adapter library compiles against the same `io.camunda:camunda-client-java` v
 (see the compatibility table in the README) and is tested against the quarkus-camunda version pinned in the BOM.
 Only long-stable Quarkus apis (`StartupEvent`, `@ConfigMapping`, `@DefaultBean`) are used, so running on the current
 Quarkus LTS is expected to work, while the pinned combination is the verified one.
+
+The adapter pulls in `io.quarkus:quarkus-hibernate-validator` as its single non-`provided` Quarkus dependency. It is
+required rather than optional on purpose: without a `ConfigValidator` on the classpath SmallRye falls back to
+`ConfigValidator.EMPTY` and every constraint on the configuration would be ignored without warning.
 
 Native image compilation is expected to work through the quarkus-camunda extension (which registers the client for
 reflection); payload classes serialized to process variables must be registered for reflection by the application
