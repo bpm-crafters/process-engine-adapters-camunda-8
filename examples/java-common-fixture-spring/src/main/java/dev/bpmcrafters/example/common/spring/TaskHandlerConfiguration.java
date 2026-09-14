@@ -1,4 +1,4 @@
-package dev.bpmcrafters.example.common.adapter;
+package dev.bpmcrafters.example.common.spring;
 
 import dev.bpmcrafters.example.common.adapter.in.process.ExecuteActionTaskHandler;
 import dev.bpmcrafters.example.common.adapter.in.process.SendingTaskHandler;
