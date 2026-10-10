@@ -28,6 +28,8 @@ class C8CamundaClientUserTaskModificationApiImpl(
     when (cmd) {
       is CompositeModifyTaskCmd -> cmd.commands.forEach(::apply)
 
+      is ChangeAssignmentModifyTaskCmd.AssignTaskCmd -> camundaClient.newAssignUserTaskCommand(cmd.taskId.toLong()).assignee(cmd.assignee).send().join()
+      is ChangeAssignmentModifyTaskCmd.UnassignTaskCmd -> camundaClient.newUnassignUserTaskCommand(cmd.taskId.toLong()).send().join()
       is ChangeAssignmentModifyTaskCmd.SetCandidateUsersTaskCmd -> sendUpdate(cmd.taskId) { it.candidateUsers(cmd.candidateUsers) }
       is ChangeAssignmentModifyTaskCmd.ClearCandidateUsersTaskCmd -> sendUpdate(cmd.taskId) { it.clearCandidateUsers() }
       is ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd -> sendUpdate(cmd.taskId) { it.candidateGroups(cmd.candidateGroups) }
@@ -38,6 +40,8 @@ class C8CamundaClientUserTaskModificationApiImpl(
       is ChangeDatesModifyTaskCmd.SetFollowUpDateTaskCmd -> sendUpdate(cmd.taskId) { it.followUpDate(cmd.followUpDate) }
       is ChangeDatesModifyTaskCmd.ClearFollowUpDateTaskCmd -> sendUpdate(cmd.taskId) { it.clearFollowUpDate() }
 
+      is ChangePayloadModifyTaskCmd.UpdatePayloadTaskCmd -> updatePayload(cmd.taskId, cmd.get())
+
       else -> throw UnsupportedOperationException("Unsupported user task modification command: ${cmd::class.qualifiedName}")
     }
   }
@@ -46,5 +50,12 @@ class C8CamundaClientUserTaskModificationApiImpl(
     val command = camundaClient.newUpdateUserTaskCommand(taskId.toLong())
     updater(command)
     command.send().join()
+  }
+
+  private fun updatePayload(taskId: String, payload: Map<String, Any?>) {
+    val task = requireNotNull(
+      camundaClient.newUserTaskSearchRequest().filter { it.userTaskKey(taskId.toLong()) }.send().join().singleItem()
+    ) { "No user task with id $taskId exists." }
+    camundaClient.newSetVariablesCommand(task.elementInstanceKey).variables(payload).send().join()
   }
 }
