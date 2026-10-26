@@ -5,14 +5,12 @@ import dev.bpmcrafters.example.common.application.port.in.PerformUserTaskInPort;
 import dev.bpmcrafters.processengineapi.task.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-@Component
 @RequiredArgsConstructor
 @Slf4j
 public class PerformUserTaskUseCase implements PerformUserTaskInPort {

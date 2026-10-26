@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_itest" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.44.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <bpmn:process id="itest-process" name="ITest Process" isExecutable="true">
+    <bpmn:startEvent id="started" name="Started">
+      <bpmn:outgoing>flow-to-service-task</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow-to-service-task" sourceRef="started" targetRef="service-do-action" />
+    <bpmn:serviceTask id="service-do-action" name="Execute action">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="execute-action-external" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow-to-service-task</bpmn:incoming>
+      <bpmn:outgoing>flow-to-user-task</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="flow-to-user-task" sourceRef="service-do-action" targetRef="user-perform-task" />
+    <bpmn:userTask id="user-perform-task" name="Perform user task">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow-to-user-task</bpmn:incoming>
+      <bpmn:outgoing>flow-to-end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="flow-to-end" sourceRef="user-perform-task" targetRef="ended" />
+    <bpmn:endEvent id="ended" name="Finished">
+      <bpmn:incoming>flow-to-end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

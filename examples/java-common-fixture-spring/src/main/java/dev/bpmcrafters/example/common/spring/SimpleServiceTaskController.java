@@ -1,4 +1,4 @@
-package dev.bpmcrafters.example.common.adapter.in.rest;
+package dev.bpmcrafters.example.common.spring;
 
 import dev.bpmcrafters.example.common.application.port.in.*;
 import dev.bpmcrafters.processengineapi.task.TaskInformation;

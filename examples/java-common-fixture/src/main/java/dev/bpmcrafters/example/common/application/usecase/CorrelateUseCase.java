@@ -3,13 +3,11 @@ package dev.bpmcrafters.example.common.application.usecase;
 import dev.bpmcrafters.example.common.application.port.in.CorrelateInPort;
 import dev.bpmcrafters.example.common.application.port.out.WorkflowOutPort;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-@Component
 @RequiredArgsConstructor
 public class CorrelateUseCase implements CorrelateInPort {
 
