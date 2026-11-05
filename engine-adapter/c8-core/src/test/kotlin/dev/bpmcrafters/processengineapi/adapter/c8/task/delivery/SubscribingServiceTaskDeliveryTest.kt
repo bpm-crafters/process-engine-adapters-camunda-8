@@ -1,6 +1,7 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.task.delivery
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions
+import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.TaskHandler
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskTerminationHandler
@@ -16,10 +17,16 @@ import io.camunda.client.api.worker.JobHandler
 import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoMoreInteractions
 import org.mockito.kotlin.whenever
 import java.time.Duration
 
@@ -240,6 +247,125 @@ class SubscribingServiceTaskDeliveryTest {
     assertThat(termination?.taskId).isEqualTo(TASK_ID)
     assertThat(termination?.meta).containsEntry(TaskInformation.REASON, TaskInformation.DELETE)
     assertThat(subscriptionRepository.getActiveSubscriptionForTask(TASK_ID)).isNull()
+  }
+
+  @Test
+  fun `should close all registered workers without closing the shared client`() {
+    val client = mock<CamundaClient>()
+    val firstWorker = mock<JobWorker>()
+    val secondWorker = mock<JobWorker>()
+    val delivery = deliveryWithWorkers(client, firstWorker, secondWorker)
+    delivery.subscribe()
+    delivery.subscribe()
+
+    delivery.close()
+
+    verify(firstWorker).close()
+    verify(secondWorker).close()
+    verify(client, times(2)).newWorker()
+    verifyNoMoreInteractions(client)
+  }
+
+  @Test
+  fun `should not close workers again on repeated cleanup`() {
+    val worker = mock<JobWorker>()
+    val delivery = deliveryWithWorkers(mock(), worker)
+    delivery.subscribe()
+
+    delivery.close()
+    delivery.close()
+
+    verify(worker).close()
+    verifyNoMoreInteractions(worker)
+  }
+
+  @Test
+  fun `should safely close without registered workers`() {
+    assertThatCode {
+      delivery.close()
+      delivery.close()
+    }.doesNotThrowAnyException()
+  }
+
+  @Test
+  fun `should attempt every worker cleanup and report failures without retrying closed workers`() {
+    val firstWorker = mock<JobWorker>()
+    val secondWorker = mock<JobWorker>()
+    val thirdWorker = mock<JobWorker>()
+    val firstFailure = IllegalStateException("first worker failed to close")
+    val secondFailure = IllegalStateException("second worker failed to close")
+    doThrow(firstFailure).whenever(firstWorker).close()
+    doThrow(secondFailure).whenever(secondWorker).close()
+    val delivery = deliveryWithWorkers(mock(), firstWorker, secondWorker, thirdWorker)
+    repeat(3) { delivery.subscribe() }
+
+    assertThatThrownBy { delivery.close() }
+      .isSameAs(firstFailure)
+      .hasSuppressedException(secondFailure)
+    delivery.close()
+
+    verify(firstWorker).close()
+    verify(secondWorker).close()
+    verify(thirdWorker).close()
+    verifyNoMoreInteractions(firstWorker, secondWorker, thirdWorker)
+  }
+
+  @Test
+  fun `should report a shared cleanup failure without suppressing itself`() {
+    val firstWorker = mock<JobWorker>()
+    val secondWorker = mock<JobWorker>()
+    val failure = IllegalStateException("shared failure")
+    doThrow(failure).whenever(firstWorker).close()
+    doThrow(failure).whenever(secondWorker).close()
+    val delivery = deliveryWithWorkers(mock(), firstWorker, secondWorker)
+    delivery.subscribe()
+    delivery.subscribe()
+
+    assertThatThrownBy { delivery.close() }.isSameAs(failure)
+
+    assertThat(failure.suppressed).isEmpty()
+    verify(firstWorker).close()
+    verify(secondWorker).close()
+  }
+
+  @Test
+  fun `should close new workers after subscribing again following cleanup`() {
+    val firstWorker = mock<JobWorker>()
+    val secondWorker = mock<JobWorker>()
+    val delivery = deliveryWithWorkers(mock(), firstWorker, secondWorker)
+    delivery.subscribe()
+    delivery.close()
+
+    delivery.subscribe()
+    delivery.close()
+
+    verify(firstWorker).close()
+    verify(secondWorker).close()
+    verifyNoMoreInteractions(firstWorker, secondWorker)
+  }
+
+  private fun deliveryWithWorkers(client: CamundaClient, vararg workers: JobWorker): SubscribingServiceTaskDelivery {
+    val repository = InMemSubscriptionRepository().apply {
+      createTaskSubscription(TaskSubscriptionHandle(
+        taskType = TaskType.EXTERNAL,
+        taskDescriptionKey = TOPIC,
+        restrictions = emptyMap(),
+        payloadDescription = null,
+        action = { _, _ -> },
+        termination = { _ -> }
+      ))
+    }
+    val builder = mock<JobWorkerBuilderStep1>()
+    val builder2 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep2>()
+    val builder3 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep3>()
+    val workerIterator = workers.iterator()
+    whenever(client.newWorker()).thenReturn(builder)
+    whenever(builder.jobType(TOPIC)).thenReturn(builder2)
+    whenever(builder2.handler(any())).thenReturn(builder3)
+    whenever(builder3.name(any())).thenReturn(builder3)
+    whenever(builder3.timeout(any<Long>())).thenReturn(builder3)
+    whenever(builder3.open()).thenAnswer { workerIterator.next() }
+    return SubscribingServiceTaskDelivery(client, repository, "test-worker", 10, 60)
   }
 
   private fun activatedJob(): ActivatedJob =

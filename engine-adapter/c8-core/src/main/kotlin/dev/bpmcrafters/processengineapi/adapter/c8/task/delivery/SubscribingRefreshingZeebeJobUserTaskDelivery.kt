@@ -10,6 +10,7 @@ import dev.bpmcrafters.processengineapi.task.TaskSubscription
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.command.ActivateJobsCommandStep1.ActivateJobsCommandStep3
+import io.camunda.client.api.command.ClientHttpException
 import io.camunda.client.api.command.ClientStatusException
 import io.camunda.client.api.command.StreamJobsCommandStep1.StreamJobsCommandStep3
 import io.camunda.client.api.response.ActivatedJob
@@ -18,6 +19,8 @@ import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.camunda.zeebe.protocol.Protocol
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.Status
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 private val logger = KotlinLogging.logger {}
 
@@ -28,20 +31,49 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
   private val userTaskLockTimeoutMs: Long,
 ) : SubscribingUserTaskDelivery, RefreshableDelivery {
 
-  private var jobWorkerRegistry: Map<TaskSubscription, JobWorker> = emptyMap()
+  private class RegisteredWorker {
+    val acceptingJobs = AtomicBoolean(true)
+    // Cancellation may precede open(); only one side may claim the attached worker for closing.
+    private val worker = AtomicReference<JobWorker?>()
+
+    fun attach(openedWorker: JobWorker) {
+      worker.set(openedWorker)
+      if (!acceptingJobs.get()) worker.getAndSet(null)?.close()
+    }
+
+    fun cancel(): JobWorker? {
+      acceptingJobs.set(false)
+      return worker.getAndSet(null)
+    }
+  }
+
+  private val jobWorkerRegistry = mutableMapOf<TaskSubscription, RegisteredWorker>()
+  private val lifecycleMonitor = Any()
   private val refreshMonitor = Any()
 
   fun subscribe() {
-    val subscriptions = subscriptionRepository.getTaskSubscriptions().filter { s -> s.taskType == TaskType.USER }
-    if (subscriptions.isNotEmpty()) {
-      logger.trace { "PROCESS-ENGINE-C8-040: subscribing user tasks for subscriptions: $subscriptions" }
-      subscriptions
-        .forEach { activeSubscription ->
-          // this is a job to subscribe to.
+    // Publish the whole batch before opening so callbacks can cancel pending workers too.
+    val registrations = synchronized(lifecycleMonitor) {
+      subscriptionRepository.getTaskSubscriptions()
+        .filter { it.taskType == TaskType.USER }
+        .map { subscription ->
+          val registration = RegisteredWorker()
+          jobWorkerRegistry[subscription] = registration
+          subscription to registration
+        }
+    }
+    if (registrations.isEmpty()) {
+      logger.trace { "PROCESS-ENGINE-C8-046: not subscribing for user tasks, no active subscription found." }
+      return
+    }
+    logger.trace { "PROCESS-ENGINE-C8-040: subscribing user tasks for subscriptions: ${registrations.map { it.first }}" }
+    try {
+      registrations.forEach { (activeSubscription, registration) ->
+        if (registration.acceptingJobs.get()) {
           val subscribedJobWorker = camundaClient
             .newWorker()
             .jobType(Protocol.USER_TASK_JOB_TYPE)
-            .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient) }
+            .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient, registration.acceptingJobs) }
             .maxJobsActive(Integer.MAX_VALUE)
             .name(workerId)
             .timeout(userTaskLockTimeoutMs)
@@ -49,16 +81,33 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
             .forSubscription(activeSubscription)
             // FIXME -> metrics to setup
             .open()
-
-          // add to registry, to be able to close worker and stop receiving updates on unsubscribe
-          jobWorkerRegistry = jobWorkerRegistry + (activeSubscription to subscribedJobWorker)
+          registration.attach(subscribedJobWorker)
         }
-    } else {
-      logger.trace { "PROCESS-ENGINE-C8-046: not subscribing for user tasks, no active subscription found." }
+      }
+    } catch (error: Throwable) {
+      val workers = synchronized(lifecycleMonitor) {
+        registrations.mapNotNull { (subscription, registration) ->
+          val worker = registration.cancel()
+          jobWorkerRegistry.remove(subscription, registration)
+          worker
+        }
+      }
+      closeWorkers(workers, error)
     }
   }
 
-  private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, zeebeClient: CamundaClient) {
+  private fun consumeActivatedJob(
+    activeSubscription: TaskSubscriptionHandle,
+    job: ActivatedJob,
+    zeebeClient: CamundaClient,
+    acceptingJobs: AtomicBoolean
+  ) {
+    // Closing a worker does not prevent outstanding poll responses from invoking its handler.
+    if (!acceptingJobs.get()) {
+      logger.trace { "PROCESS-ENGINE-C8-057: Returning user task ${job.key} received after unsubscribe." }
+      zeebeClient.newFailCommand(job.key).retries(job.retries).send().join()
+      return
+    }
     if (activeSubscription.matches(job)) {
       val taskId = "${job.key}"
       subscriptionRepository.activateSubscriptionForTask(taskId, activeSubscription)
@@ -114,6 +163,14 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
 
             else -> logger.error(e) { "PROCESS-ENGINE-C8-052: Error extending job $taskId, ${e.message}." }
           }
+        } catch (e: ClientHttpException) {
+          if (e.code() == 404) {
+            logger.trace { "PROCESS-ENGINE-C8-050: User task is gone, sending termination to the handler." }
+            deactivateAndTerminate(taskId)
+            logger.trace { "PROCESS-ENGINE-C8-051: Termination sent to handler and user task is removed." }
+          } else {
+            logger.error(e) { "PROCESS-ENGINE-C8-052: Error extending job $taskId, ${e.message}." }
+          }
         }
       }
     } else {
@@ -133,12 +190,35 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
 
   override fun unsubscribe(taskSubscription: TaskSubscription) {
     logger.debug { "PROCESS-ENGINE-C8-054: Unsubscribe from user task: $taskSubscription" }
-    jobWorkerRegistry[taskSubscription]?.close()
+    val worker = synchronized(lifecycleMonitor) {
+      jobWorkerRegistry.remove(taskSubscription)?.cancel()
+    }
+    worker?.close()
   }
 
   fun unsubscribeAll() {
     logger.debug { "PROCESS-ENGINE-C8-055: Unsubscribe all user tasks." }
-    jobWorkerRegistry.forEach { (_, job) -> job.close() }
+    val workers = synchronized(lifecycleMonitor) {
+      jobWorkerRegistry.values.mapNotNull { it.cancel() }.also { jobWorkerRegistry.clear() }
+    }
+    closeWorkers(workers)
+  }
+
+  private fun closeWorkers(workers: List<JobWorker>, initialFailure: Throwable? = null) {
+    var failure = initialFailure
+    workers.forEach { worker ->
+      try {
+        worker.close()
+      } catch (error: Throwable) {
+        val previousFailure = failure
+        if (previousFailure == null) {
+          failure = error
+        } else if (previousFailure !== error) {
+          previousFailure.addSuppressed(error)
+        }
+      }
+    }
+    failure?.let { throw it }
   }
 
   /*

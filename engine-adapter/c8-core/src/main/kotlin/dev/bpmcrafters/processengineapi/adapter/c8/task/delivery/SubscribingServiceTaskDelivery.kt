@@ -8,6 +8,7 @@ import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
@@ -23,8 +24,11 @@ class SubscribingServiceTaskDelivery(
   private val workerId: String,
   private val retryTimeoutInSeconds: Long,
   private val lockDurationInSeconds: Long
-) {
+) : AutoCloseable {
 
+  private val workers = mutableListOf<JobWorker>()
+
+  @Synchronized
   fun subscribe() {
     val subscriptions = subscriptionRepository.getTaskSubscriptions().filter { s -> s.taskType == TaskType.EXTERNAL }
     if (subscriptions.isNotEmpty()) {
@@ -33,7 +37,7 @@ class SubscribingServiceTaskDelivery(
         .filter { it.taskType == TaskType.EXTERNAL }
         .forEach { activeSubscription ->
           // this is a job to subscribe to.
-          camundaClient
+          val worker = camundaClient
             .newWorker()
             .jobType(activeSubscription.taskDescriptionKey)
             .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient) }
@@ -41,10 +45,32 @@ class SubscribingServiceTaskDelivery(
             .forSubscription(activeSubscription)
             // FIXME -> metrics to setup
             .open()
+          workers.add(worker)
         }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-050: Not subscribing service tasks for subscriptions. No subscriptions found." }
     }
+  }
+
+  /** Serializes cleanup with subscription creation; subscriptions may be opened again after cleanup. */
+  @Synchronized
+  override fun close() {
+    val workersToClose = workers.toList()
+    workers.clear()
+    var failure: Throwable? = null
+    workersToClose.forEach { worker ->
+      try {
+        worker.close()
+      } catch (error: Throwable) {
+        val previousFailure = failure
+        if (previousFailure == null) {
+          failure = error
+        } else if (previousFailure !== error) {
+          previousFailure.addSuppressed(error)
+        }
+      }
+    }
+    failure?.let { throw it }
   }
 
   private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, camundaClient: CamundaClient) {
