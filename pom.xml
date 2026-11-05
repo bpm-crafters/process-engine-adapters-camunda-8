@@ -21,6 +21,21 @@
     <!-- COMMON GLOBAL -->
     <process-engine-api.version>1.7</process-engine-api.version>
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
+    <c8-core.jackson.version>2.21.4</c8-core.jackson.version>
+    <c8-core.junit.version>6.0.3</c8-core.junit.version>
+    <c8-core.mockito.version>5.23.0</c8-core.mockito.version>
+    <c8-core.grpc.version>1.80.0</c8-core.grpc.version>
+    <c8-core.netty.version>4.2.15.Final</c8-core.netty.version>
+    <c8-core.protobuf.version>4.34.2</c8-core.protobuf.version>
+    <c8-core.protobuf-common-protos.version>2.70.0</c8-core.protobuf-common-protos.version>
+    <c8-core.byte-buddy.version>1.18.10</c8-core.byte-buddy.version>
+    <c8-core.httpclient5.version>5.6.1</c8-core.httpclient5.version>
+    <c8-core.httpcore5.version>5.4.2</c8-core.httpcore5.version>
+    <c8-core.gson.version>2.13.2</c8-core.gson.version>
+    <c8-core.hamcrest.version>3.0</c8-core.hamcrest.version>
+    <c8-core.jspecify.version>1.0.0</c8-core.jspecify.version>
+    <c8-core.snakeyaml.version>2.6</c8-core.snakeyaml.version>
+    <c8-core.commons-codec.version>1.21.0</c8-core.commons-codec.version>
 
     <!-- C8 -->
     <camunda.version>8.10.7</camunda.version>
@@ -167,7 +182,6 @@
         <configuration>
           <jvmTarget>17</jvmTarget>
           <compilerPlugins>
-            <plugin>spring</plugin>
             <plugin>no-arg</plugin>
             <plugin>all-open</plugin>
           </compilerPlugins>
