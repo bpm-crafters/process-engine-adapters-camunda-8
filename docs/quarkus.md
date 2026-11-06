@@ -15,7 +15,11 @@ Use this extension to inject the Process Engine API into a Quarkus application a
 | Integration tests | Docker |
 
 Build/install the development artifacts locally or use your configured snapshot repository before consuming this unreleased version.
-The Quarkus dependency management stays inside `engine-adapter/c8-quarkus`; the core does not depend on Quarkus or Spring.
+The Quarkus dependency management stays inside `engine-adapter/c8-quarkus` and `examples/java-c8-quarkus`; the core does not depend on Quarkus or Spring.
+
+For a runnable Java application with HTTP walkthrough, local Compose stack, SaaS profile, and automatic workers,
+see [java-c8-quarkus](../examples/java-c8-quarkus/README.md). It reuses the Spring Boot 3 example's process model
+and feature range. The extension integration application below exercises broader API and delivery-strategy coverage.
 
 [Quarkus `3.40.1.1`](https://quarkus.io/blog/quarkus-3-40-1-1-released/) is the latest stable release compatible with Java 17 as of 2026-11-05.
 Quarkiverse Camunda `2.1.3` targets Java 17; its `3.0.x` releases require Java 21.
