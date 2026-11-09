@@ -10,6 +10,7 @@
   <name>Test Application: C8 Quarkus</name>
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
+    <kp.plugin.skipDeploy>true</kp.plugin.skipDeploy>
     <maven.install.skip>true</maven.install.skip>
     <argLine/>
   </properties>
@@ -107,6 +108,20 @@
     </plugins>
   </build>
   <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <configuration>
+              <skipPublishing>true</skipPublishing>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>native</id>
       <activation><property><name>native</name></property></activation>

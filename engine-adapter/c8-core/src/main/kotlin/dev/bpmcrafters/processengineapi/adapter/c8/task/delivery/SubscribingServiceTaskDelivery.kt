@@ -12,62 +12,178 @@ import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
 
 /**
  * Uses task subscription available in the repository to subscribe to zeebe.
  */
-class SubscribingServiceTaskDelivery(
+class SubscribingServiceTaskDelivery @JvmOverloads constructor(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
   private val workerId: String,
   private val retryTimeoutInSeconds: Long,
-  private val lockDurationInSeconds: Long
+  private val lockDurationInSeconds: Long,
+  /** Positive bound shared by all callback/opening waits in one cleanup attempt. */
+  private val shutdownTimeout: Duration = Duration.ofSeconds(30)
 ) : AutoCloseable {
 
-  private val workers = mutableListOf<JobWorker>()
+  init {
+    require(!shutdownTimeout.isNegative && !shutdownTimeout.isZero) { "shutdownTimeout must be positive" }
+    shutdownTimeout.toNanos() // Reject durations that cannot be represented by the monotonic deadline.
+  }
 
-  @Synchronized
+  private class Registration {
+    var accepting = true
+    var worker: JobWorker? = null
+    var settled = false
+    var inFlight = 0
+    var closingFailure: Throwable? = null
+  }
+
+  private val monitor = Object()
+  private val registrations = mutableListOf<Registration>()
+  private var closing = false
+  private val callbackDepth = ThreadLocal.withInitial { 0 }
+  private val openingDepth = ThreadLocal.withInitial { 0 }
+
   fun subscribe() {
     val subscriptions = subscriptionRepository.getTaskSubscriptions().filter { s -> s.taskType == TaskType.EXTERNAL }
-    if (subscriptions.isNotEmpty()) {
-      logger.trace { "PROCESS-ENGINE-C8-050: subscribing service tasks for subscriptions: $subscriptions" }
-      subscriptions
-        .filter { it.taskType == TaskType.EXTERNAL }
-        .forEach { activeSubscription ->
-          // this is a job to subscribe to.
-          val worker = camundaClient
-            .newWorker()
-            .jobType(activeSubscription.taskDescriptionKey)
-            .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient) }
-            .name(workerId)
-            .forSubscription(activeSubscription)
-            // FIXME -> metrics to setup
-            .open()
-          workers.add(worker)
+    val batch = synchronized(monitor) {
+      check(!closing && registrations.none { !it.accepting }) { "Service task cleanup is incomplete or in progress" }
+      subscriptions.map { it to Registration().also { registration -> registrations.add(registration) } }
+    }
+    logger.trace {
+      if (batch.isEmpty()) "PROCESS-ENGINE-C8-050: Not subscribing service tasks for subscriptions. No subscriptions found."
+      else "PROCESS-ENGINE-C8-050: subscribing service tasks for subscriptions: $subscriptions"
+    }
+    openingDepth.set(openingDepth.get() + 1)
+    var failure: Throwable? = null
+    try {
+      batch.forEach { (subscription, registration) ->
+        try {
+          if (synchronized(monitor) { registration.accepting }) {
+            val worker = camundaClient.newWorker()
+              .jobType(subscription.taskDescriptionKey)
+              .handler { _, job -> deliver(registration, subscription, job) }
+              .name(workerId)
+              .forSubscription(subscription)
+              .open()
+            val closeLateWorker = synchronized(monitor) {
+              if (registration.accepting) {
+                registration.worker = worker
+                false
+              } else true
+            }
+            if (closeLateWorker) {
+              try {
+                worker.close()
+              } catch (error: Throwable) {
+                synchronized(monitor) { registration.closingFailure = error }
+                throw error
+              }
+            }
+          }
+        } finally {
+          synchronized(monitor) {
+            registration.settled = true
+            monitor.notifyAll()
+          }
         }
-    } else {
-      logger.trace { "PROCESS-ENGINE-C8-050: Not subscribing service tasks for subscriptions. No subscriptions found." }
+      }
+    } catch (error: Throwable) {
+      failure = error
+    } finally {
+      // An opening failure must also release registrations whose open() was never attempted.
+      synchronized(monitor) {
+        batch.forEach { (_, registration) -> registration.settled = true }
+        monitor.notifyAll()
+      }
+      openingDepth.set(openingDepth.get() - 1)
+    }
+    failure?.let { error ->
+      try {
+        close()
+      } catch (cleanupError: Throwable) {
+        if (cleanupError !== error) error.addSuppressed(cleanupError)
+      }
+      throw error
     }
   }
 
-  /** Serializes cleanup with subscription creation; subscriptions may be opened again after cleanup. */
-  @Synchronized
+  private fun deliver(registration: Registration, subscription: TaskSubscriptionHandle, job: ActivatedJob) {
+    synchronized(monitor) {
+      if (!registration.accepting) return
+      registration.inFlight++
+    }
+    callbackDepth.set(callbackDepth.get() + 1)
+    try {
+      consumeActivatedJob(subscription, job, camundaClient)
+    } finally {
+      callbackDepth.set(callbackDepth.get() - 1)
+      synchronized(monitor) {
+        registration.inFlight--
+        monitor.notifyAll()
+      }
+    }
+  }
+
+  /**
+   * Disables every registration before stopping acquisition, then drains the entire synchronous
+   * callback (including repository and failure handling). Queued callbacks are ignored; their jobs
+   * expire normally. Does not own the client, its executors, or application asynchronous work.
+   * Timeout, interruption, concurrent cleanup and self-wait report failure rather than a false drain.
+   * Incomplete registrations remain tracked for a later cleanup attempt.
+   */
   override fun close() {
-    val workersToClose = workers.toList()
-    workers.clear()
+    val deadline = System.nanoTime() + shutdownTimeout.toNanos()
+    val (snapshot, workersToClose) = synchronized(monitor) {
+      check(!closing) { "Service task cleanup is already in progress" }
+      closing = true
+      val snapshot = registrations.toList()
+      snapshot.forEach { it.accepting = false }
+      snapshot to snapshot.mapNotNull { registration ->
+        registration.worker.also { registration.worker = null }
+      }
+    }
     var failure: Throwable? = null
-    workersToClose.forEach { worker ->
-      try {
-        worker.close()
-      } catch (error: Throwable) {
-        val previousFailure = failure
-        if (previousFailure == null) {
-          failure = error
-        } else if (previousFailure !== error) {
-          previousFailure.addSuppressed(error)
+    fun record(error: Throwable) {
+      val previous = failure
+      if (previous == null) failure = error
+      else if (previous !== error) previous.addSuppressed(error)
+    }
+    try {
+      workersToClose.forEach { worker ->
+        try {
+          worker.close()
+        } catch (error: Throwable) {
+          record(error)
         }
+      }
+      try {
+        synchronized(monitor) {
+          check(callbackDepth.get() == 0 && openingDepth.get() == 0) {
+            "Cannot drain service task callbacks from a callback or worker-opening thread"
+          }
+          while (snapshot.any { it.inFlight != 0 || !it.settled }) {
+            val remaining = deadline - System.nanoTime()
+            check(remaining > 0) { "Service task callbacks did not drain within $shutdownTimeout" }
+            TimeUnit.NANOSECONDS.timedWait(monitor, remaining)
+          }
+        }
+      } catch (error: InterruptedException) {
+        Thread.currentThread().interrupt()
+        record(error)
+      } catch (error: Throwable) {
+        record(error)
+      }
+    } finally {
+      synchronized(monitor) {
+        snapshot.forEach { registration -> registration.closingFailure?.let(::record) }
+        registrations.removeAll { !it.accepting && it.inFlight == 0 && it.settled }
+        closing = false
+        monitor.notifyAll()
       }
     }
     failure?.let { throw it }

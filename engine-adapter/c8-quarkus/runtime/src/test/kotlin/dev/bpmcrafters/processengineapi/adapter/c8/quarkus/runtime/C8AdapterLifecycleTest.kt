@@ -5,6 +5,16 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTas
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingServiceTaskDelivery
+import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
+import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
+import dev.bpmcrafters.processengineapi.task.TaskType
+import dev.bpmcrafters.processengineapi.task.TaskHandler
+import io.camunda.client.CamundaClient
+import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.worker.JobClient
+import io.camunda.client.api.worker.JobHandler
+import io.camunda.client.api.worker.JobWorker
+import io.camunda.client.api.worker.JobWorkerBuilderStep1
 import jakarta.enterprise.inject.Instance
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalStateException
@@ -23,14 +33,18 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.verifyNoMoreInteractions
 import org.mockito.kotlin.whenever
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import java.time.Duration
 
 class C8AdapterLifecycleTest {
 
@@ -115,6 +129,195 @@ class C8AdapterLifecycleTest {
         scheduler.shutdownNow()
         assertThat(scheduler.awaitTermination(5, TimeUnit.SECONDS)).`as`("scheduler terminated").isTrue()
       }
+    }
+  }
+
+  @Test
+  fun `stop drains real service callbacks before application disposal and rejects queued callbacks`() {
+    val entered = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    val workerClosed = CountDownLatch(1)
+    val actions = AtomicInteger()
+    val disposed = AtomicInteger()
+    val repository = InMemSubscriptionRepository().apply {
+      createTaskSubscription(TaskSubscriptionHandle(
+        taskType = TaskType.EXTERNAL,
+        taskDescriptionKey = "service-topic",
+        restrictions = emptyMap(),
+        payloadDescription = null,
+        action = { _, _ ->
+          actions.incrementAndGet()
+          entered.countDown()
+          check(release.await(30, TimeUnit.SECONDS)) { "handler was not released" }
+          assertThat(disposed.get()).`as`("application remains alive during callback").isZero()
+        },
+        termination = { _ -> }
+      ))
+    }
+    val client = mock<CamundaClient>()
+    val worker = mock<JobWorker>()
+    val builder = mock<JobWorkerBuilderStep1>()
+    val builder2 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep2>()
+    val builder3 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep3>()
+    val handler = argumentCaptor<JobHandler>()
+    whenever(client.newWorker()).thenReturn(builder)
+    whenever(builder.jobType("service-topic")).thenReturn(builder2)
+    whenever(builder2.handler(handler.capture())).thenReturn(builder3)
+    whenever(builder3.name(any())).thenReturn(builder3)
+    whenever(builder3.timeout(any<Long>())).thenReturn(builder3)
+    whenever(builder3.open()).thenReturn(worker)
+    doAnswer { workerClosed.countDown(); null }.whenever(worker).close()
+    val service = SubscribingServiceTaskDelivery(client, repository, "test-worker", 10, 60)
+    val fixture = Fixture("SUBSCRIPTION", "CUSTOM", emptyMap(), service)
+    val job = mock<ActivatedJob> {
+      whenever(it.key).thenReturn(1234L)
+      whenever(it.type).thenReturn("service-topic")
+      whenever(it.variablesAsMap).thenReturn(emptyMap())
+      whenever(it.customHeaders).thenReturn(emptyMap())
+    }
+    val jobClient = mock<JobClient>()
+    val callbacks = Executors.newSingleThreadExecutor()
+    val stopper = Executors.newSingleThreadExecutor()
+    try {
+      fixture.lifecycle.start(null)
+      val admitted = callbacks.submit(Runnable { handler.firstValue.handle(jobClient, job) })
+      assertThat(entered.await(5, TimeUnit.SECONDS)).`as`("application handler entered").isTrue()
+      val queued = callbacks.submit(Runnable { handler.firstValue.handle(jobClient, job) })
+      val stopping = stopper.submit(Runnable {
+        fixture.lifecycle.stop(null)
+        disposed.incrementAndGet()
+      })
+      assertThat(workerClosed.await(5, TimeUnit.SECONDS)).`as`("worker acquisition stopped").isTrue()
+      assertThatThrownBy { stopping.get(200, TimeUnit.MILLISECONDS) }.isInstanceOf(TimeoutException::class.java)
+      assertThat(disposed.get()).isZero()
+      release.countDown()
+      admitted.get(5, TimeUnit.SECONDS)
+      stopping.get(5, TimeUnit.SECONDS)
+      queued.get(5, TimeUnit.SECONDS)
+      callbacks.submit(Runnable { handler.firstValue.handle(jobClient, job) }).get(5, TimeUnit.SECONDS)
+      assertThat(actions.get()).isEqualTo(1)
+      assertThat(disposed.get()).isEqualTo(1)
+      verify(client).newWorker()
+      verifyNoMoreInteractions(client)
+    } finally {
+      release.countDown()
+      callbacks.shutdownNow()
+      stopper.shutdownNow()
+      callbacks.awaitTermination(5, TimeUnit.SECONDS)
+      stopper.awaitTermination(5, TimeUnit.SECONDS)
+    }
+  }
+
+  @Test
+  fun `real service timeout still closes listener and reports incomplete cleanup`() {
+    val entered = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    val real = RealServiceFixture(TaskHandler { _, _ ->
+      entered.countDown()
+      check(release.await(30, TimeUnit.SECONDS))
+    }, Duration.ofMillis(30))
+    val fixture = Fixture("SUBSCRIPTION", "LISTENER", emptyMap(), real.service)
+    val callbacks = Executors.newSingleThreadExecutor()
+    val stopper = Executors.newSingleThreadExecutor()
+    val job = real.job()
+    val client = mock<JobClient>()
+    try {
+      fixture.lifecycle.start(null)
+      val callback = callbacks.submit(Runnable { real.handlers.firstValue.handle(client, job) })
+      assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue()
+      val stopping = stopper.submit(Runnable { fixture.lifecycle.stop(null) })
+      assertThatThrownBy { stopping.get(5, TimeUnit.SECONDS) }
+        .hasCauseInstanceOf(IllegalStateException::class.java)
+        .hasStackTraceContaining("did not drain")
+      verify(real.worker).close()
+      verify(fixture.listener).close()
+      release.countDown()
+      callback.get(5, TimeUnit.SECONDS)
+      real.service.close()
+    } finally {
+      release.countDown()
+      callbacks.shutdownNow()
+      stopper.shutdownNow()
+      callbacks.awaitTermination(5, TimeUnit.SECONDS)
+      stopper.awaitTermination(5, TimeUnit.SECONDS)
+    }
+  }
+
+  @Test
+  fun `draining handler can reenter lifecycle stop without blocking on lifecycle lock`() {
+    val entered = CountDownLatch(1)
+    val closing = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    lateinit var fixture: Fixture
+    val real = RealServiceFixture(TaskHandler { _, _ ->
+      entered.countDown()
+      check(release.await(30, TimeUnit.SECONDS))
+      assertThatThrownBy { fixture.lifecycle.stop(null) }.hasMessageContaining("already in progress")
+    })
+    doAnswer { closing.countDown(); null }.whenever(real.worker).close()
+    fixture = Fixture("SUBSCRIPTION", "CUSTOM", emptyMap(), real.service)
+    val callbacks = Executors.newSingleThreadExecutor()
+    val stopper = Executors.newSingleThreadExecutor()
+    val job = real.job()
+    val client = mock<JobClient>()
+    try {
+      fixture.lifecycle.start(null)
+      val callback = callbacks.submit(Runnable { real.handlers.firstValue.handle(client, job) })
+      assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue()
+      val stopping = stopper.submit(Runnable { fixture.lifecycle.stop(null) })
+      assertThat(closing.await(5, TimeUnit.SECONDS)).isTrue()
+      assertThatThrownBy { stopping.get(200, TimeUnit.MILLISECONDS) }.isInstanceOf(TimeoutException::class.java)
+      release.countDown()
+      callback.get(5, TimeUnit.SECONDS)
+      stopping.get(5, TimeUnit.SECONDS)
+      fixture.lifecycle.stop(null)
+    } finally {
+      release.countDown()
+      callbacks.shutdownNow()
+      stopper.shutdownNow()
+      callbacks.awaitTermination(5, TimeUnit.SECONDS)
+      stopper.awaitTermination(5, TimeUnit.SECONDS)
+    }
+  }
+
+  @Test
+  fun `startup rollback releases lifecycle lock before draining reentrant service callback`() {
+    val entered = CountDownLatch(1)
+    val workerClosed = CountDownLatch(1)
+    val startupFailure = IllegalStateException("listener startup failed")
+    lateinit var fixture: Fixture
+    val real = RealServiceFixture(TaskHandler { _, _ ->
+      entered.countDown()
+      check(workerClosed.await(5, TimeUnit.SECONDS)) { "rollback did not close the worker" }
+      assertThatThrownBy { fixture.lifecycle.stop(null) }.hasMessageContaining("already in progress")
+    }, Duration.ofSeconds(1))
+    fixture = Fixture("SUBSCRIPTION", "LISTENER", emptyMap(), real.service)
+    doAnswer { workerClosed.countDown(); null }.whenever(real.worker).close()
+    val callbacks = Executors.newSingleThreadExecutor()
+    val starter = Executors.newSingleThreadExecutor()
+    val job = real.job()
+    val client = mock<JobClient>()
+    lateinit var callback: Future<*>
+    doAnswer {
+      callback = callbacks.submit(Runnable { real.handlers.firstValue.handle(client, job) })
+      check(entered.await(5, TimeUnit.SECONDS)) { "service callback did not enter" }
+      throw startupFailure
+    }.whenever(fixture.listener).subscribe()
+    try {
+      val starting = starter.submit(Runnable { fixture.lifecycle.start(null) })
+      assertThatThrownBy { starting.get(5, TimeUnit.SECONDS) }.hasCause(startupFailure)
+      verify(real.worker).close()
+      verify(fixture.listener).close()
+      verify(real.client).newWorker()
+      verifyNoMoreInteractions(real.client)
+      assertThat(startupFailure.suppressed).`as`("rollback drains without a cleanup timeout").isEmpty()
+      callback.get(5, TimeUnit.SECONDS)
+    } finally {
+      workerClosed.countDown()
+      callbacks.shutdownNow()
+      starter.shutdownNow()
+      callbacks.awaitTermination(5, TimeUnit.SECONDS)
+      starter.awaitTermination(5, TimeUnit.SECONDS)
     }
   }
 
@@ -359,6 +562,43 @@ class C8AdapterLifecycleTest {
     verify(fixture.listener).close()
   }
 
+  private class RealServiceFixture(action: TaskHandler, timeout: Duration = Duration.ofSeconds(30)) {
+    val client = mock<CamundaClient>()
+    val worker = mock<JobWorker>()
+    val handlers = argumentCaptor<JobHandler>()
+    val service: SubscribingServiceTaskDelivery
+
+    init {
+      val repository = InMemSubscriptionRepository().apply {
+        createTaskSubscription(TaskSubscriptionHandle(
+          taskType = TaskType.EXTERNAL,
+          taskDescriptionKey = "service-topic",
+          restrictions = emptyMap(),
+          payloadDescription = null,
+          action = action,
+          termination = { _ -> }
+        ))
+      }
+      val builder = mock<JobWorkerBuilderStep1>()
+      val builder2 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep2>()
+      val builder3 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep3>()
+      whenever(client.newWorker()).thenReturn(builder)
+      whenever(builder.jobType("service-topic")).thenReturn(builder2)
+      whenever(builder2.handler(handlers.capture())).thenReturn(builder3)
+      whenever(builder3.name(any())).thenReturn(builder3)
+      whenever(builder3.timeout(any<Long>())).thenReturn(builder3)
+      whenever(builder3.open()).thenReturn(worker)
+      service = SubscribingServiceTaskDelivery(client, repository, "test-worker", 10, 60, timeout)
+    }
+
+    fun job(): ActivatedJob = mock {
+      whenever(it.key).thenReturn(1234L)
+      whenever(it.type).thenReturn("service-topic")
+      whenever(it.variablesAsMap).thenReturn(emptyMap())
+      whenever(it.customHeaders).thenReturn(emptyMap())
+    }
+  }
+
   private class ShutdownSignallingExecutor : ScheduledThreadPoolExecutor(1) {
     val shutdownStarted = CountDownLatch(1)
     lateinit var delivery: ScheduledFuture<*>
@@ -374,8 +614,12 @@ class C8AdapterLifecycleTest {
     }
   }
 
-  private class Fixture(serviceStrategy: String, userStrategy: String, settings: Map<String, String>) {
-    val service = mock<SubscribingServiceTaskDelivery>()
+  private class Fixture(
+    serviceStrategy: String,
+    userStrategy: String,
+    settings: Map<String, String>,
+    val service: SubscribingServiceTaskDelivery = mock()
+  ) {
     val pull = mock<PullUserTaskDelivery>()
     val refresh = mock<SubscribingRefreshingZeebeJobUserTaskDelivery>()
     val listener = mock<ListenerUserTaskDelivery>()

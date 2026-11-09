@@ -42,15 +42,17 @@ class C8AdapterLifecycle @Inject constructor(
   private var schedule: ScheduledFuture<*>? = null
   private var started = false
   private var stopped = false
+  private var stopping = false
 
-  @Synchronized
   fun start(@Observes @Priority(STARTUP_PRIORITY) event: StartupEvent?) {
-    if (started || stopped) return
-    started = true
     try {
-      config.validate(build)
-      startServices()
-      startUsers()
+      synchronized(this) {
+        if (started || stopped) return
+        started = true
+        config.validate(build)
+        startServices()
+        startUsers()
+      }
     } catch (failure: RuntimeException) {
       cleanupAfterStartupFailure(failure)
       throw failure
@@ -126,14 +128,23 @@ class C8AdapterLifecycle @Inject constructor(
     Thread(runnable, "C8-ADAPTER-USER-TASKS")
   }
 
-  @Synchronized
   fun stop(@Observes @Priority(SHUTDOWN_PRIORITY) event: ShutdownEvent?) {
-    if (stopped) return
-    stopped = true
-    val actions = mutableListOf(AutoCloseable { stopSchedule() })
-    actions.addAll(cleanup)
-    cleanup.clear()
-    closeAll(actions)
+    val actions = synchronized(this) {
+      check(!stopping) { "Adapter cleanup is already in progress" }
+      if (stopped) return
+      stopped = true
+      stopping = true
+      mutableListOf(AutoCloseable { stopSchedule() }).also {
+        it.addAll(cleanup)
+        cleanup.clear()
+      }
+    }
+    // A draining handler may reenter stop(); never hold the lifecycle lock while waiting for it.
+    try {
+      closeAll(actions)
+    } finally {
+      synchronized(this) { stopping = false }
+    }
   }
 
   private fun stopSchedule() {
