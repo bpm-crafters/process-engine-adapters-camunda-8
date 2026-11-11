@@ -98,12 +98,15 @@ Use the Quarkus extension for CDI wiring and task delivery in JVM applications:
 ```
 
 The extension is new in the **unreleased `2026.09.2-SNAPSHOT`** development version.
-Use Quarkus **3.40.1.1**, the latest stable Java **17**-compatible release as of **2026-11-05**; the extension brings Quarkiverse Camunda **2.1.3**
-(Camunda **8.10.7**) transitively. Add only the runtime artifact shown above, not its deployment artifact.
+The minimum versions are Quarkus **3.37.3** and application JDK **17**; lower-platform compatibility validation remains pending.
+Defaults remain Quarkus **3.40.1.1** and official Camunda Java client **8.10.7**, without a mandatory Quarkiverse dependency.
+Use matching SDK/server versions. Matching **8.8/8.9** SDK integration is not implemented or verified; a custom CDI client does not fix SDK binary incompatibilities.
+Global user-task listener registration requires Camunda **8.9+**, with no automatic polling fallback.
+Add only the runtime artifact shown above, not its deployment artifact.
 See the [Quarkus guide](docs/quarkus.md) for BOM imports, configuration, subscriptions, and JVM verification.
 
 Build the full repository and run JVM applications with Java **17**; integration tests require Docker.
-The supported target and required CI coverage are JVM-only. See the guide for pinned upstream limitations.
+The supported target and required CI coverage are JVM-only. See the guide for client ownership and configuration.
 
 ## Anatomy
 

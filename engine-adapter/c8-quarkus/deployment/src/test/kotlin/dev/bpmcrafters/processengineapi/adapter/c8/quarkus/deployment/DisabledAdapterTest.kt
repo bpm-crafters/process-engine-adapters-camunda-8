@@ -16,6 +16,7 @@ import dev.bpmcrafters.processengineapi.task.ServiceTaskCompletionApi
 import dev.bpmcrafters.processengineapi.task.TaskSubscriptionApi
 import dev.bpmcrafters.processengineapi.task.UserTaskCompletionApi
 import dev.bpmcrafters.processengineapi.task.UserTaskModificationApi
+import io.camunda.client.CamundaClient
 import io.quarkus.arc.Arc
 import io.quarkus.test.QuarkusUnitTest
 import org.assertj.core.api.Assertions.assertThat
@@ -28,14 +29,12 @@ class DisabledAdapterTest {
     @RegisterExtension
     val APPLICATION: QuarkusUnitTest = QuarkusUnitTest()
       .withEmptyApplication()
-      .overrideConfigKey("quarkus.camunda.devservices.enabled", "false")
-      .overrideConfigKey("quarkus.camunda.resources.enabled", "false")
-      .overrideRuntimeConfigKey("quarkus.camunda.active", "false")
   }
 
   @Test
   fun `adapter is disabled by default`() {
     for (type in listOf(
+      CamundaClient::class.java,
       DeploymentApi::class.java, StartProcessApi::class.java, CorrelationApi::class.java, SignalApi::class.java,
       EvaluateDecisionApi::class.java, TaskSubscriptionApi::class.java, ServiceTaskCompletionApi::class.java,
       UserTaskCompletionApi::class.java, UserTaskModificationApi::class.java, SubscriptionRepository::class.java,

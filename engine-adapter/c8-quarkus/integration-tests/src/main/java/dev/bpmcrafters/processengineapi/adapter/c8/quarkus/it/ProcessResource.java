@@ -60,7 +60,7 @@ public class ProcessResource {
 
   private Map<String, Object> payload(final String runId) {
     return Map.of("runId", runId, "keep", true, "discard", "not-selected",
-        "payload", new ApplicationPayload("nested", List.of(3, 5), true, 12.5));
+        "payload", new ApplicationPayload("nested", List.of(3, 5), true, 12.5, "large-payload-".repeat(1400)));
   }
 
   @POST @Path("/message-start/{runId}")
@@ -144,7 +144,7 @@ public class ProcessResource {
   }
 
   @RegisterForReflection
-  public record ApplicationPayload(String label, List<Integer> numbers, boolean enabled, double amount) {}
+  public record ApplicationPayload(String label, List<Integer> numbers, boolean enabled, double amount, String text) {}
 
   @RegisterForReflection
   public record Offer(double score, String message) {}

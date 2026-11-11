@@ -21,9 +21,7 @@ import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.quarkus.arc.Arc
 import io.quarkus.runtime.StartupEvent
 import io.quarkus.test.QuarkusUnitTest
-import jakarta.annotation.Priority
 import jakarta.enterprise.event.Observes
-import jakarta.enterprise.inject.Alternative
 import jakarta.enterprise.inject.Produces
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -51,10 +49,7 @@ abstract class SubscribingDeliveryTestSupport {
       .overrideConfigKey("quarkus.process-engine-api.c8.enabled", "true")
       .overrideConfigKey("quarkus.process-engine-api.c8.service-tasks.delivery-strategy", "CUSTOM")
       .overrideConfigKey("quarkus.process-engine-api.c8.user-tasks.delivery-strategy", strategy)
-      .overrideConfigKey("quarkus.camunda.devservices.enabled", "false")
-      .overrideConfigKey("quarkus.camunda.resources.enabled", "false")
       .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.service-tasks.worker-id", "test-worker")
-      .overrideRuntimeConfigKey("quarkus.camunda.active", "false")
       .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.user-tasks.listener.preload-existing-tasks", "false")
       .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.user-tasks.schedule-delivery-fixed-rate-in-seconds", "3600")
   }
@@ -102,8 +97,6 @@ abstract class SubscribingDeliveryTestSupport {
     }
   }
 
-  @Alternative
-  @Priority(1)
   @Singleton
   class ClientProducer {
     @Produces

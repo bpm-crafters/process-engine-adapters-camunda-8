@@ -11,13 +11,12 @@ import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep2
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
+import io.quarkus.arc.Arc
 import io.quarkus.runtime.Startup
 import io.quarkus.runtime.StartupEvent
 import io.quarkus.test.QuarkusUnitTest
 import jakarta.annotation.PostConstruct
-import jakarta.annotation.Priority
 import jakarta.enterprise.event.Observes
-import jakarta.enterprise.inject.Alternative
 import jakarta.enterprise.inject.Produces
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -40,6 +39,10 @@ class StartupOrderingTest {
         StrategyTestSupport::class.java, StrategyTestSupport.Companion::class.java, State::class.java,
         ClientProducer::class.java, ApplicationSubscriptions::class.java, StartupBean::class.java
       ) }
+      .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.client.grpc-address", "unused invalid endpoint")
+      .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.client.oauth.client-id", "unused-partial-oauth")
+      .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.client.request-timeout", "not-a-duration")
+      .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.client.prefer-rest-over-grpc", "not-a-boolean")
   }
 
   @field:Inject lateinit var state: State
@@ -53,6 +56,7 @@ class StartupOrderingTest {
     assertThat(state.events.indexOf("worker-opened")).isGreaterThan(state.events.indexOf("subscription-registered"))
     lifecycle.stop(null)
     verify(state.worker).close()
+    Arc.container().instance(CamundaClient::class.java).destroy()
     verify(client, never()).close()
   }
 
@@ -86,8 +90,6 @@ class StartupOrderingTest {
     }
   }
 
-  @Alternative
-  @Priority(1)
   @Singleton
   class ClientProducer {
     @Produces

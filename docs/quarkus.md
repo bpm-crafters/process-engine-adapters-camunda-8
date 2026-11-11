@@ -7,10 +7,11 @@ Use this extension to inject the Process Engine API into a Quarkus application a
 | Component | Version / requirement |
 | --- | --- |
 | Adapter | `2026.09.2-SNAPSHOT` (**unreleased**, not a Maven Central release) |
-| Quarkus platform | `3.40.1.1` |
-| Quarkiverse Camunda | `2.1.3`, brought in transitively |
-| Camunda | `8.10.7` |
-| Application and full repository build JDK | Java 17 |
+| Quarkus platform | Minimum `3.37.3`; default `3.40.1.1` |
+| Camunda server | Match the SDK; default test server `8.10.7` |
+| Camunda Java client | Official SDK `8.10.7`, direct runtime dependency |
+| Application JDK | Minimum Java 17; JVM-only |
+| Full repository build JDK | Java 17 |
 | Core and Spring artifacts | Continue to target Java 17 |
 | Integration tests | Docker |
 
@@ -21,9 +22,12 @@ For a runnable Java application with HTTP walkthrough, local Compose stack, SaaS
 see [java-c8-quarkus](../examples/java-c8-quarkus/README.md). It reuses the Spring Boot 3 example's process model
 and feature range. The extension integration application below exercises broader API and delivery-strategy coverage.
 
-[Quarkus `3.40.1.1`](https://quarkus.io/blog/quarkus-3-40-1-1-released/) is the latest stable release compatible with Java 17 as of 2026-11-05.
-Quarkiverse Camunda `2.1.3` targets Java 17; its `3.0.x` releases require Java 21.
-Repository dependency management overrides `2.1.3`'s upstream Camunda `8.9.21` default with `8.10.7`.
+The extension integrates the [official Camunda Java client](https://docs.camunda.io/docs/apis-tools/java-client/getting-started/)
+directly. It does not require Quarkiverse Camunda. Repository dependency management keeps the SDK at `8.10.7`.
+Use matching SDK/server versions and one SDK family per classpath. Matching `8.8`/`8.9` SDK integration
+is not implemented or verified; using the `8.10.7` SDK against older servers is not a supported compatibility recipe.
+Minimum framework/JDK versions describe the target; lower-platform compatibility validation remains pending.
+Server container JVM requirements are independent of the application's Java 17 minimum.
 
 ## Install
 
@@ -77,18 +81,49 @@ quarkus.process-engine-api.c8.service-tasks.delivery-strategy=SUBSCRIPTION
 quarkus.process-engine-api.c8.service-tasks.worker-id=my-application
 quarkus.process-engine-api.c8.user-tasks.delivery-strategy=SCHEDULED
 
-quarkus.camunda.client.broker.gateway-address=http://localhost:26500
-quarkus.camunda.client.broker.rest-address=http://localhost:8080
-quarkus.camunda.devservices.enabled=false
-# Disable automatic resource deployment when using DeploymentApi yourself.
-quarkus.camunda.resources.enabled=false
+quarkus.process-engine-api.c8.client.grpc-address=http://localhost:26500
+quarkus.process-engine-api.c8.client.rest-address=http://localhost:8080
 ```
 
-The adapter owns `quarkus.process-engine-api.c8.*`. Quarkiverse owns the shared Camunda client and
-`quarkus.camunda.*` connection, authentication, and client settings. Follow the
-[Quarkiverse Camunda guide](https://docs.quarkiverse.io/quarkus-camunda/dev/index.html)
-for SaaS or self-managed authentication; select settings appropriate to version `2.1.3`.
-Do not copy credentials into source control.
+The adapter owns `quarkus.process-engine-api.c8.*`. Use both endpoints for the same cluster.
+The REST address is the base URL without `/v2`; SaaS base URLs may include a cluster path.
+Do not copy credentials into source control. See the [SaaS example](../examples/java-c8-quarkus/README.md#saas).
+
+### Default client and migration
+
+The enabled adapter supplies one `@Singleton @DefaultBean CamundaClient`. An ordinary application
+`@Produces @Singleton CamundaClient` replaces it without `@Alternative` or priority. The disabled adapter
+does not create a client. Only the default producer validates and uses the following settings:
+
+| Property under `quarkus.process-engine-api.c8.client.` | Default | Meaning |
+| --- | --- | --- |
+| `grpc-address` | `http://localhost:26500` | HTTP(S) gRPC endpoint |
+| `rest-address` | `http://localhost:8080` | HTTP(S) REST base URL |
+| `prefer-rest-over-grpc` | `true` | Prefer REST for commands supporting both transports; accepts case-insensitive `true`/`false`, `yes`/`no`, `y`/`n`, `on`/`off`, or `1`/`0` |
+| `request-timeout` | `PT45S` | Positive Quarkus duration, for example `PT45S`, `45s`, or `45` (seconds) |
+| `oauth.client-id` | None | Nonblank OAuth client ID, paired with secret |
+| `oauth.client-secret` | None | Nonblank OAuth secret, paired with ID |
+| `oauth.auth-url` | `https://login.cloud.camunda.io/oauth/token` | Token endpoint |
+| `oauth.token-audience` | None | Explicit nonblank audience required with OAuth |
+
+Without OAuth credentials the default client uses no authentication. Partial or blank OAuth credentials
+fail explicitly. SDK and OAuth environment overrides are disabled so Quarkus configuration takes precedence;
+use explicit `${ENV_VAR}` placeholders, as the example does. The SDK's default JSON mapper handles serialization.
+Provide an application client for basic authentication, custom TLS, advanced SDK options, or custom serialization.
+An override changes CDI wiring, not dependency resolution: it cannot select an older SDK or repair ABI mismatches.
+The default producer parses and validates its connection settings only when selected, so malformed or empty
+unused client settings do not prevent an application-supplied client from starting.
+
+| Previous Quarkiverse key | Replacement |
+| --- | --- |
+| `quarkus.camunda.client.broker.gateway-address` | `quarkus.process-engine-api.c8.client.grpc-address` |
+| `quarkus.camunda.client.broker.rest-address` | `quarkus.process-engine-api.c8.client.rest-address` |
+| `quarkus.camunda.client.oauth.*` | `quarkus.process-engine-api.c8.client.oauth.*` for the four fields above |
+| `quarkus.camunda.active`, `resources.enabled`, `devservices.enabled` | Remove; no equivalent is needed |
+
+This extension does not supply Quarkiverse NoOp clients, Dev Services, automatic resource deployment,
+annotation workers, health integration, or native-image conveniences. Use explicit `DeploymentApi`
+deployment, subscriptions, and an externally managed server or the example's Docker Compose stack.
 
 ### Build-time configuration
 
@@ -164,6 +199,15 @@ Injection does not mean that every command variant works for every task type.
 the schedule interval, converted to milliseconds.
 
 In `LISTENER` mode, configure BPMN listeners to use the listener topic or enable global listener registration.
+Global user-task listeners, including static global configuration and REST registration, require
+[Camunda 8.9+](https://docs.camunda.io/docs/8.9/reference/announcements-release-notes/890/890-release-notes/#global-user-task-listeners).
+Registration remains opt-in and never silently falls back to polling.
+
+This is an engine feature prerequisite, not a promise of adapter support for older SDK/server families.
+The current fixtures use global registration on the default `8.10.7` server. They do not cover BPMN-defined listeners.
+
+Polling uses ordinary variable searches and fetches explicitly truncated values by variable key.
+It does not send the full-value search option introduced in server `8.8.5`.
 Startup runs optional global registration, optional preload of existing tasks, and then subscription, in that order.
 A registration failure prevents preload and subscription. A preload exception logs the failure and allows subscription to continue.
 
@@ -212,30 +256,14 @@ Register service subscriptions before startup delivery and restart to change the
 the core service delivery opens workers from the subscriptions present when it starts.
 Removing a service subscription does not close its already-opened worker; the worker stays open until adapter shutdown.
 Do not rely on hot subscription registration or removal to manage service workers.
-The extension closes its owned schedules and workers at shutdown and dev-mode reload; its shutdown observer uses priority `2000`.
-Quarkiverse retains ownership of the shared Camunda client.
-
-### Known upstream limitations
-
-Quarkiverse Camunda `2.1.3` retains the same active-client, authentication, configuration, serialization,
-and native registrations as `3.0.2`. Quarkiverse owns the shared `CamundaClient`; the adapter does not reimplement it.
-
-Pinned Quarkiverse Camunda `2.1.3` uses the annotation types `io.quarkus.runtime.Startup` and
-`io.quarkus.runtime.Shutdown` as client lifecycle observer parameters, rather than `StartupEvent` and `ShutdownEvent`
-([pinned source](https://github.com/quarkiverse/quarkus-camunda/blob/2.1.3/runtime/src/main/java/io/quarkiverse/camunda/runtime/LifecycleManager.java)).
-Do not assume automatic shared-client shutdown or dev-reload cleanup from the adapter's worker cleanup.
-The adapter closes only its owned workers and scheduler; it does not work around the upstream client lifecycle.
-This is a limitation of the pinned dependency, not a new adapter regression. Client leakage has not been measured empirically.
-
-`quarkus.camunda.active=false` selects Quarkiverse's `NoOpClient`; the default `true` uses the real client.
-This setting differs from disabling the adapter (`quarkus.process-engine-api.c8.enabled=false`) or Dev Services.
-The `2.1.3` no-op client lacks newer Camunda `8.10` abstract methods/builders; calling them can throw
-`AbstractMethodError`. Current adapter paths do not call those missing methods, and deployment/CDI tests use
-the no-op client. The adapter supplies no fallback client or no-op compatibility fix.
-
-The older `2.1.3` Dev Services implementation has not been verified with Camunda `8.10.7`.
-This repository uses an explicitly managed server with `quarkus.camunda.devservices.enabled=false`,
-as shown above; do not infer universal Dev Services compatibility.
+The extension's shutdown observer uses priority `2000` to stop its owned schedules and workers.
+CDI then disposes the extension's default client. The producer's `@Disposes` method closes only its own product.
+Lifecycle regression tests exercise natural Quarkus shutdown and failed-startup teardown with the real default
+client and test-owned worker/delivery mocks; they also check independent application-client disposal.
+Dev-mode reload relies on the same teardown mechanism, but closing old resources and using a replacement
+client across an actual reload remain unverified. JVM shutdown tests do not establish dev-mode reload coverage.
+The adapter never closes an application-supplied client. Its application producer must provide a disposer
+or equivalent ownership-aware cleanup after adapter workers stop.
 
 ## Override defaults
 
@@ -262,6 +290,27 @@ public class AdapterBeans {
 Select `CUSTOM` explicitly when your application owns delivery. Supply `UserTaskCompletionApi` yourself
 in user-task `CUSTOM` mode if your application needs it. The extension does not silently select a fallback strategy.
 
+For example, own a custom client and its cleanup in the application:
+
+```kotlin
+@Singleton
+class ApplicationClient {
+  @Produces
+  @Singleton
+  fun client(): CamundaClient = CamundaClient.newClientBuilder()
+    .applyEnvironmentVariableOverrides(false)
+    .grpcAddress(URI("http://localhost:26500"))
+    .restAddress(URI("http://localhost:8080"))
+    .build()
+
+  fun close(@Disposes client: CamundaClient) = client.close()
+}
+```
+
+Use `io.camunda.client.CamundaClient`, `java.net.URI`, `jakarta.inject.Singleton`, and
+`jakarta.enterprise.inject.Produces` / `Disposes` imports. The producer is an ordinary application bean;
+the extension's [default bean](https://quarkus.io/guides/cdi-reference#default_beans) yields to it.
+
 ## Supported target
 
 The supported target and required CI coverage are JVM-only. Native image builds are not required by this project.
@@ -287,6 +336,12 @@ Run focused extension verification from the repository root. Repeat with `SCHEDU
 ```
 
 The integration application exposes its configured strategy so tests exercise the mode fixed at build time.
+
+`camunda.test.version` selects only the test server image, not the SDK. Retain matching `8.10.7`
+SDK/server versions for current verification. Matching `8.8`/`8.9` integration requires future work;
+do not use an older server image as a substitute for that migration.
+Lower-platform verification remains pending and must also consume the default-built extension in a separate
+Quarkus `3.37.3` / JDK 17 application without recompiling the libraries.
 
 Verify all four strategies manually on the JVM. The full repository build exercises the default `SCHEDULED` strategy;
 repeat the focused command above for each other strategy by changing the strategy property.

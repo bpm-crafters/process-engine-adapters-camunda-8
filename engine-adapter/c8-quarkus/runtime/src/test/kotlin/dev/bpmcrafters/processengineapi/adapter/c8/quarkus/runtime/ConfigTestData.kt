@@ -1,6 +1,7 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime
 
 import io.smallrye.config.SmallRyeConfigBuilder
+import io.smallrye.config.SmallRyeConfig
 
 object ConfigTestData {
   const val PREFIX = "quarkus.process-engine-api.c8."
@@ -20,9 +21,9 @@ object ConfigTestData {
       .withDefaultValues(values.mapKeys { (key, _) -> PREFIX + key }).build()
     return Configuration(
       config.getConfigMapping(C8AdapterBuildTimeConfig::class.java),
-      config.getConfigMapping(C8AdapterRuntimeConfig::class.java)
+      config.getConfigMapping(C8AdapterRuntimeConfig::class.java), config
     )
   }
 
-  data class Configuration(val build: C8AdapterBuildTimeConfig, val runtime: C8AdapterRuntimeConfig)
+  data class Configuration(val build: C8AdapterBuildTimeConfig, val runtime: C8AdapterRuntimeConfig, val source: SmallRyeConfig)
 }

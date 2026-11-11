@@ -39,9 +39,9 @@
 
     <!-- C8 -->
     <camunda.version>8.10.7</camunda.version>
+    <camunda.test.version>${camunda.version}</camunda.test.version>
     <spring-boot.version>4.1.0</spring-boot.version>
     <quarkus.version>3.40.1.1</quarkus.version>
-    <quarkiverse-camunda.version>2.1.3</quarkiverse-camunda.version>
 
     <!-- TEST -->
     <mockito.version>6.4.0</mockito.version>

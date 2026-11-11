@@ -55,14 +55,13 @@ abstract class StrategyTestSupport {
   @field:Inject lateinit var registrations: Instance<GlobalUserTaskListenerRegistrationHelper>
 
   companion object {
-    fun application(service: String, user: String): QuarkusUnitTest = QuarkusUnitTest().withEmptyApplication()
+    fun application(service: String, user: String): QuarkusUnitTest = QuarkusUnitTest()
+      .withApplicationRoot { it.addClass(TestCamundaClientProducer::class.java) }
       .overrideConfigKey("quarkus.process-engine-api.c8.enabled", "true")
       .overrideConfigKey("quarkus.process-engine-api.c8.service-tasks.delivery-strategy", service)
       .overrideConfigKey("quarkus.process-engine-api.c8.user-tasks.delivery-strategy", user)
-      .overrideConfigKey("quarkus.camunda.devservices.enabled", "false")
-      .overrideConfigKey("quarkus.camunda.resources.enabled", "false")
       .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.service-tasks.worker-id", "test-worker")
-      .overrideRuntimeConfigKey("quarkus.camunda.active", "false")
+      .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.user-tasks.listener.preload-existing-tasks", "false")
   }
 
   @Test

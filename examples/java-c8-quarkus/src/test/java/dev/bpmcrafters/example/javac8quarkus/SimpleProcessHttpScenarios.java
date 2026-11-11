@@ -193,9 +193,16 @@ public abstract class SimpleProcessHttpScenarios {
   }
 
   private Map<String, Object> variables(final long instance) {
-    return observer.newVariableSearchRequest().filter(f -> f.processInstanceKey(instance)).withFullValues()
+    return observer.newVariableSearchRequest().filter(f -> f.processInstanceKey(instance))
         .send().join().items().stream().collect(Collectors.toMap(v -> v.getName(),
-            v -> JsonPath.from(v.getValue()).get(""), (first, second) -> second));
+            v -> JsonPath.from(fullValue(v)).get(""), (first, second) -> second));
+  }
+
+  private String fullValue(final io.camunda.client.api.search.response.Variable variable) {
+    if (!Boolean.TRUE.equals(variable.isTruncated())) return variable.getValue();
+    final var key = variable.getVariableKey();
+    if (key == null || key <= 0) throw new IllegalStateException("Missing or invalid truncated variable key");
+    return observer.newVariableGetRequest(key).send().join().getValue();
   }
 
   private void finished(final long instance, final String end) {

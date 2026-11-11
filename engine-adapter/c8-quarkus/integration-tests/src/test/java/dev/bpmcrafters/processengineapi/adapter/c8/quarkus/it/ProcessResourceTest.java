@@ -286,6 +286,7 @@ public class ProcessResourceTest {
         .containsEntry("runId", run).containsEntry("keep", true);
     final var nested = (Map<?, ?>) event.variables().get("payload");
     assertThat(nested.get("label")).isEqualTo("nested");
+    assertThat(nested.get("text")).isEqualTo("large-payload-".repeat(1400));
     assertThat(nested.get("numbers")).isEqualTo(List.of(3, 5));
     assertThat(nested.get("enabled")).isEqualTo(true);
     assertThat(((Number) nested.get("amount")).doubleValue()).isEqualTo(12.5);

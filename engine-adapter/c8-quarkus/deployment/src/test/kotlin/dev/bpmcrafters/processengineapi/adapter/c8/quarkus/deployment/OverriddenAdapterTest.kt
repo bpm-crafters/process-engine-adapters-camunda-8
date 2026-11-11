@@ -41,14 +41,11 @@ class OverriddenAdapterTest {
     @JvmField
     @RegisterExtension
     val APPLICATION: QuarkusUnitTest = QuarkusUnitTest()
-      .withApplicationRoot { archive -> archive.addClass(CustomAdapterProducer::class.java) }
+      .withApplicationRoot { archive -> archive.addClasses(CustomAdapterProducer::class.java, TestCamundaClientProducer::class.java) }
       .overrideConfigKey("quarkus.process-engine-api.c8.enabled", "true")
       .overrideConfigKey("quarkus.process-engine-api.c8.service-tasks.delivery-strategy", "CUSTOM")
       .overrideConfigKey("quarkus.process-engine-api.c8.user-tasks.delivery-strategy", "SCHEDULED")
       .overrideRuntimeConfigKey("quarkus.process-engine-api.c8.service-tasks.worker-id", "test-worker")
-      .overrideConfigKey("quarkus.camunda.devservices.enabled", "false")
-      .overrideConfigKey("quarkus.camunda.resources.enabled", "false")
-      .overrideRuntimeConfigKey("quarkus.camunda.active", "false")
   }
 
   @field:Inject lateinit var deploymentApis: Instance<DeploymentApi>

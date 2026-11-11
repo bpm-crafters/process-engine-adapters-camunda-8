@@ -10,6 +10,38 @@ import java.util.Optional
 @ConfigMapping(prefix = "quarkus.process-engine-api.c8")
 interface C8AdapterRuntimeConfig {
 
+  /** Connection settings used only by the default client. */
+  fun client(): Client
+
+  interface Client {
+    /** HTTP(S) gRPC endpoint. */
+    @WithDefault("http://localhost:26500")
+    fun grpcAddress(): Optional<String>
+    /** REST base URL without the API version suffix. */
+    @WithDefault("http://localhost:8080")
+    fun restAddress(): Optional<String>
+    /** Prefer REST for commands that support both transports. */
+    @WithDefault("true")
+    fun preferRestOverGrpc(): Optional<String>
+    /** Positive command request timeout. */
+    @WithDefault("PT45S")
+    fun requestTimeout(): Optional<String>
+    /** Optional OAuth client credentials. */
+    fun oauth(): OAuth
+  }
+
+  interface OAuth {
+    /** Client ID, required when OAuth is selected. */
+    fun clientId(): Optional<String>
+    /** Client secret, required when OAuth is selected. */
+    fun clientSecret(): Optional<String>
+    /** OAuth token endpoint. */
+    @WithDefault("https://login.cloud.camunda.io/oauth/token")
+    fun authUrl(): Optional<String>
+    /** Explicit token audience, required when OAuth is selected. */
+    fun tokenAudience(): Optional<String>
+  }
+
   /** External service task settings. */
   fun serviceTasks(): ServiceTasks
 

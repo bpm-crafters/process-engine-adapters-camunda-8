@@ -3,6 +3,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8.quarkus.it;
 import io.camunda.client.CamundaClient;
 import io.camunda.client.api.search.enums.IncidentState;
 import io.camunda.client.api.search.enums.MessageSubscriptionState;
+import io.camunda.client.api.search.response.Variable;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -22,10 +23,17 @@ public class EngineObservationResource {
         .send().join().items().stream()
         .map(e -> Map.of("elementId", e.getElementId(), "state", e.getState().name())).toList();
     final var variables = client.newVariableSearchRequest().filter(f -> f.processInstanceKey(key))
-        .withFullValues().send().join().items().stream()
-        .collect(java.util.stream.Collectors.toMap(v -> v.getName(), v -> v.getValue(), (a, b) -> b));
+        .send().join().items().stream()
+        .collect(java.util.stream.Collectors.toMap(v -> v.getName(), this::fullValue, (a, b) -> b));
     return Map.of("state", process.getState().name(), "definition", process.getProcessDefinitionId(),
         "elements", elements, "variables", variables);
+  }
+
+  private String fullValue(final Variable variable) {
+    if (!Boolean.TRUE.equals(variable.isTruncated())) return variable.getValue();
+    final var key = variable.getVariableKey();
+    if (key == null || key <= 0) throw new IllegalStateException("Missing or invalid truncated variable key");
+    return client.newVariableGetRequest(key).send().join().getValue();
   }
 
   @GET @Path("/message-wait/{key}/{runId}")

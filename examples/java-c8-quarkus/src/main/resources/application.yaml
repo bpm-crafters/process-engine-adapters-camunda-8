@@ -19,29 +19,24 @@ quarkus:
         listener:
           auto-register-global-listener: true
           preload-existing-tasks: true
-  camunda:
-    resources:
-      enabled: false
-    devservices:
-      enabled: false
 
 "%run":
   quarkus:
-    camunda:
-      client:
-        broker:
-          gateway-address: "${CAMUNDA_GRPC_ADDRESS:http://localhost:26500}"
+    process-engine-api:
+      c8:
+        client:
+          grpc-address: "${CAMUNDA_GRPC_ADDRESS:http://localhost:26500}"
           rest-address: "${CAMUNDA_REST_ADDRESS:http://localhost:8088}"
 
 "%saas":
   quarkus:
-    camunda:
-      client:
-        broker:
-          gateway-address: "${CAMUNDA_GRPC_ADDRESS}"
+    process-engine-api:
+      c8:
+        client:
+          grpc-address: "${CAMUNDA_GRPC_ADDRESS}"
           rest-address: "${CAMUNDA_REST_ADDRESS}"
-        oauth:
-          client-id: "${ZEEBE_CLIENT_ID}"
-          client-secret: "${ZEEBE_CLIENT_SECRET}"
-          auth-url: "${CAMUNDA_OAUTH_URL:https://login.cloud.camunda.io/oauth/token}"
-          token-audience: "${CAMUNDA_TOKEN_AUDIENCE:zeebe.camunda.io}"
+          oauth:
+            client-id: "${ZEEBE_CLIENT_ID}"
+            client-secret: "${ZEEBE_CLIENT_SECRET}"
+            auth-url: "${CAMUNDA_OAUTH_URL:https://login.cloud.camunda.io/oauth/token}"
+            token-audience: "${CAMUNDA_TOKEN_AUDIENCE:zeebe.camunda.io}"

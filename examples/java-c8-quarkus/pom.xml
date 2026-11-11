@@ -16,11 +16,6 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>io.camunda</groupId>
-        <artifactId>zeebe-protocol-jackson</artifactId>
-        <version>${camunda.version}</version>
-      </dependency>
-      <dependency>
         <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-bom</artifactId>
         <version>${quarkus.version}</version>
@@ -86,7 +81,7 @@
           <classpathDependencyExcludes><classpathDependencyExclude>org.slf4j:slf4j-simple</classpathDependencyExclude></classpathDependencyExcludes>
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-            <camunda.version>${camunda.version}</camunda.version>
+            <camunda.test.version>${camunda.test.version}</camunda.test.version>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -98,7 +93,7 @@
           <classpathDependencyExcludes><classpathDependencyExclude>org.slf4j:slf4j-simple</classpathDependencyExclude></classpathDependencyExcludes>
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-            <camunda.version>${camunda.version}</camunda.version>
+            <camunda.test.version>${camunda.test.version}</camunda.test.version>
           </systemPropertyVariables>
         </configuration>
       </plugin>

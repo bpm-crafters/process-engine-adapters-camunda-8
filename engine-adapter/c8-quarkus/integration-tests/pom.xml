@@ -83,7 +83,7 @@
           <argLine>@{argLine} ${surefireArgLine} -Djava.awt.headless=true -XX:+StartAttachListener</argLine>
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-            <camunda.version>${camunda.version}</camunda.version>
+            <camunda.test.version>${camunda.test.version}</camunda.test.version>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -100,7 +100,7 @@
           <argLine>@{argLine} ${failsafeArgLine}</argLine>
           <systemPropertyVariables>
             <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-            <camunda.version>${camunda.version}</camunda.version>
+            <camunda.test.version>${camunda.test.version}</camunda.test.version>
             <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
           </systemPropertyVariables>
         </configuration>

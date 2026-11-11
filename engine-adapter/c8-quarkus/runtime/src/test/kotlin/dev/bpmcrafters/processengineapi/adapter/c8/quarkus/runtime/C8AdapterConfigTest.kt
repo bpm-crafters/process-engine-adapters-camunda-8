@@ -35,6 +35,10 @@ class C8AdapterConfigTest {
   @Test
   fun `preserves operational defaults`() {
     val config = ConfigTestData.enabled("SUBSCRIPTION", "LISTENER", emptyMap()).runtime
+    assertThat(config.client().oauth().clientId()).isEmpty()
+    assertThat(config.client().oauth().clientSecret()).isEmpty()
+    assertThat(config.client().oauth().tokenAudience()).isEmpty()
+    assertThat(config.client().oauth().authUrl()).contains("https://login.cloud.camunda.io/oauth/token")
     assertThat(config.serviceTasks().retries()).isEqualTo(3)
     assertThat(config.serviceTasks().retryTimeoutInSeconds()).isEqualTo(5)
     assertThat(config.serviceTasks().lockTimeInSeconds()).isEqualTo(300)

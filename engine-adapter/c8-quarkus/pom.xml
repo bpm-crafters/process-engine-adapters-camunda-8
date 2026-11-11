@@ -10,6 +10,9 @@
   <artifactId>process-engine-adapter-camunda-platform-c8-quarkus-parent</artifactId>
   <packaging>pom</packaging>
   <name>Adapter: C8 Quarkus Parent</name>
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+  </properties>
   <modules>
     <module>runtime</module>
     <module>deployment</module>
@@ -18,26 +21,11 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>io.camunda</groupId>
-        <artifactId>zeebe-protocol-jackson</artifactId>
-        <version>${camunda.version}</version>
-      </dependency>
-      <dependency>
         <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-bom</artifactId>
         <version>${quarkus.version}</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.quarkiverse.camunda</groupId>
-        <artifactId>quarkus-camunda</artifactId>
-        <version>${quarkiverse-camunda.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.quarkiverse.camunda</groupId>
-        <artifactId>quarkus-camunda-deployment</artifactId>
-        <version>${quarkiverse-camunda.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

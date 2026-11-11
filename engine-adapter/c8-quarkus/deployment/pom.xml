@@ -19,10 +19,6 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.quarkiverse.camunda</groupId>
-      <artifactId>quarkus-camunda-deployment</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-arc-deployment</artifactId>
     </dependency>

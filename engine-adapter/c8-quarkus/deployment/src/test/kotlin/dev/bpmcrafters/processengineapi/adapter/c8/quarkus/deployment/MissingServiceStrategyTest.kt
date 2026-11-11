@@ -11,7 +11,6 @@ class MissingServiceStrategyTest {
     @RegisterExtension
     val APPLICATION: QuarkusUnitTest = QuarkusUnitTest().withEmptyApplication()
       .overrideConfigKey("quarkus.process-engine-api.c8.enabled", "true")
-      .overrideConfigKey("quarkus.camunda.devservices.enabled", "false")
       .assertException { error -> assertThat(error).hasStackTraceContaining(
         "quarkus.process-engine-api.c8.service-tasks.delivery-strategy is required"
       ) }

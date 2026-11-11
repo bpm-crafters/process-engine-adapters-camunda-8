@@ -3,6 +3,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8.quarkus.deployment
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8AdapterBuildTimeConfig
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8AdapterLifecycle
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8AdapterProducer
+import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8CamundaClientProducer
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8ListenerTaskProducer
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8NativeUserTaskProducer
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8RefreshingTaskProducer
@@ -21,7 +22,7 @@ class C8AdapterProcessor {
     if (!config.enabled()) return null
     config.validate()
     val beans = AdditionalBeanBuildItem.builder().setUnremovable()
-      .addBeanClasses(C8AdapterProducer::class.java, C8AdapterLifecycle::class.java)
+      .addBeanClasses(C8AdapterProducer::class.java, C8AdapterLifecycle::class.java, C8CamundaClientProducer::class.java)
     if (config.serviceTasks().deliveryStrategy().orElseThrow() == C8AdapterBuildTimeConfig.ServiceStrategy.SUBSCRIPTION) {
       beans.addBeanClass(C8ServiceTaskProducer::class.java)
     }

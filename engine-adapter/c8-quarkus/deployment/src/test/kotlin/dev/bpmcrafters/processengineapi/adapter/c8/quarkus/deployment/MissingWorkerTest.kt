@@ -13,8 +13,6 @@ class MissingWorkerTest {
       .overrideConfigKey("quarkus.process-engine-api.c8.enabled", "true")
       .overrideConfigKey("quarkus.process-engine-api.c8.service-tasks.delivery-strategy", "CUSTOM")
       .overrideConfigKey("quarkus.process-engine-api.c8.user-tasks.delivery-strategy", "CUSTOM")
-      .overrideConfigKey("quarkus.camunda.devservices.enabled", "false")
-      .overrideRuntimeConfigKey("quarkus.camunda.active", "false")
       .assertException { error -> assertThat(error).hasStackTraceContaining(
         "quarkus.process-engine-api.c8.service-tasks.worker-id is missing or invalid"
       ) }

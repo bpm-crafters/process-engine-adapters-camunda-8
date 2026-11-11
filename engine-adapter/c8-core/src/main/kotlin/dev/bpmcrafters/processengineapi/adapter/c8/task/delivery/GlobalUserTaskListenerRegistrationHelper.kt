@@ -42,7 +42,7 @@ open class GlobalUserTaskListenerRegistrationHelper(
       }
     } catch (e: Exception) {
       throw IllegalStateException(
-        "Failed to auto-register Camunda global user task listener '$globalListenerId'. Check Orchestration Cluster API permissions.",
+        "Failed to auto-register Camunda global user task listener '$globalListenerId'. Global user task listeners require Camunda 8.9+. Check the server version and Orchestration Cluster API permissions.",
         e
       )
     }

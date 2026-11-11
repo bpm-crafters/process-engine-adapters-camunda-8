@@ -1,6 +1,6 @@
 # Java Camunda 8 Quarkus example
 
-Run the Process Engine API with Java 17, Quarkus `3.40.1.1`, Quarkiverse Camunda `2.1.3`, and Camunda `8.10.7` on the JVM. This application uses CDI and JAX-RS, not Spring or the Spring-coupled common fixture.
+Run the Process Engine API with Java 17, Quarkus `3.40.1.1`, and the official Camunda Java SDK/server `8.10.7` on the JVM, without mandatory Quarkiverse integration. The minimum targets are application JDK 17 and Quarkus `3.37.3`; lower-platform compatibility validation remains pending. This application uses CDI and JAX-RS, not Spring or the Spring-coupled common fixture.
 
 Maven packages [the existing Spring Boot example model](../java-c8-sb3/src/main/resources/simple-process.bpmn) unchanged at the classpath root. The [diagram](../java-c8-sb3/src/main/resources/simple-process.png) describes both examples.
 
@@ -24,6 +24,14 @@ The Compose stack is **local-only**: APIs are unauthenticated, UI credentials ar
 ```shell
 docker compose -f examples/java-c8-quarkus/docker-compose.yaml down -v
 ```
+
+### SDK/server compatibility
+
+Use matching SDK/server versions. The default remains `8.10.7`, with `LISTENER` delivery and global registration.
+Matching `8.8`/`8.9` SDK integration is not implemented or verified. A custom client producer cannot change
+the SDK version on the classpath or repair ABI mismatches. Global registration requires server `8.9+`
+and never falls back automatically to polling; that feature prerequisite does not establish older-version support.
+`camunda.test.version` selects only the test container image, not the SDK or application connection.
 
 ## Walk through the process
 
@@ -51,7 +59,7 @@ The initial payload contains `stringValue`, integer `intValue`, `listVariable=[e
 
 The native user-task error route deliberately differs from a successful completion: Camunda's core adapter does not support throwing BPMN errors for native user-task keys. `501` is this example's explicit HTTP convention, not a claim about the Camunda REST API. Do not use job-based error commands with native user-task keys.
 
-Subscriptions register at CDI startup priority `2500`, before adapter delivery at `3000`. Services use `SUBSCRIPTION`; native user tasks use `LISTENER`, global listener registration and preload, with the default five-second interval. The adapter owns workers; Quarkiverse owns the shared client. The application unregisters after adapter workers close. See the [extension lifecycle limitations](../../docs/quarkus.md#known-upstream-limitations).
+Subscriptions register at CDI startup priority `2500`, before adapter delivery at `3000`. Services use `SUBSCRIPTION`; native user tasks use `LISTENER`, global listener registration and preload, with the default five-second interval. The adapter stops workers before CDI disposes its default client. The application unregisters after adapter workers close. An ordinary application client producer overrides the default and owns its cleanup; see [client configuration and migration](../../docs/quarkus.md#default-client-and-migration).
 
 ## SaaS
 
@@ -65,7 +73,7 @@ export ZEEBE_CLIENT_SECRET='<client-secret>'
 java -Dquarkus.profile=saas -jar examples/java-c8-quarkus/target/quarkus-app/quarkus-run.jar
 ```
 
-The REST address is a base URL **without `/v2`**. Both addresses are mandatory; the Quarkiverse `cloud.*` shortcut configures only gRPC in this pinned version. OAuth defaults to `https://login.cloud.camunda.io/oauth/token` and audience `zeebe.camunda.io`; override `CAMUNDA_OAUTH_URL` / `CAMUNDA_TOKEN_AUDIENCE` with the Console values (migrated credentials may use `api.camunda.io`). Never commit secrets.
+The REST address is a base URL **without `/v2`**. Both addresses are mandatory. The profile maps endpoints and OAuth under `quarkus.process-engine-api.c8.client.*`; SDK environment overrides are disabled. This example explicitly defaults OAuth to `https://login.cloud.camunda.io/oauth/token` and audience `zeebe.camunda.io`; override `CAMUNDA_OAUTH_URL` / `CAMUNDA_TOKEN_AUDIENCE` with the Console values (migrated credentials may use `api.camunda.io`). Never commit secrets.
 
 Global listener registration reads the listener and creates it when missing. Grant the required `GLOBAL_LISTENER` / `CREATE_TASK_LISTENER` permission as well as ordinary deployment, process, and task permissions. Registration failure stops startup; this example does not silently fall back to polling. **Live SaaS is not validated without credentials and listener permissions.** See [SaaS client connections](https://docs.camunda.io/docs/apis-tools/java-client/getting-started/#step-2b-configure-the-orchestration-cluster-connection-for-saas) and [SaaS architecture migration](https://docs.camunda.io/docs/apis-tools/migration-manuals/saas-orchestration-architecture/).
 

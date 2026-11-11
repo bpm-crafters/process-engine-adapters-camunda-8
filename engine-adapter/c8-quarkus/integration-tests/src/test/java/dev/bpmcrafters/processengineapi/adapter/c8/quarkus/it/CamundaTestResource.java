@@ -18,8 +18,8 @@ public class CamundaTestResource implements QuarkusTestResourceLifecycleManager 
     try {
       camunda.start();
       return Map.of(
-          "quarkus.camunda.client.broker.gateway-address", address(26500),
-          "quarkus.camunda.client.broker.rest-address", address(8080));
+          "quarkus.process-engine-api.c8.client.grpc-address", address(26500),
+          "quarkus.process-engine-api.c8.client.rest-address", address(8080));
     } catch (final RuntimeException failure) {
       throw startupFailure(failure);
     }
@@ -41,7 +41,7 @@ public class CamundaTestResource implements QuarkusTestResourceLifecycleManager 
   }
 
   private GenericContainer<?> createContainer() {
-    final var version = Objects.requireNonNull(System.getProperty("camunda.version"), "Missing Camunda version");
+    final var version = Objects.requireNonNull(System.getProperty("camunda.test.version"), "Missing camunda.test.version test server version");
     return new GenericContainer<>(DockerImageName.parse("camunda/camunda:" + version))
         .withExposedPorts(8080, 26500)
         .withEnv("SPRING_PROFILES_ACTIVE", "broker,consolidated-auth,security")
@@ -51,6 +51,10 @@ public class CamundaTestResource implements QuarkusTestResourceLifecycleManager 
         .withEnv("CAMUNDA_DATA_SECONDARYSTORAGE_RDBMS_URL", "jdbc:h2:mem:quarkus;DB_CLOSE_DELAY=-1;MODE=PostgreSQL")
         .withEnv("CAMUNDA_DATA_SECONDARYSTORAGE_RDBMS_USERNAME", "sa")
         .withEnv("CAMUNDA_DATA_SECONDARYSTORAGE_RDBMS_PASSWORD", "")
+        .withEnv("CAMUNDA_DATABASE_TYPE", "rdbms")
+        .withEnv("CAMUNDA_DATABASE_URL", "jdbc:h2:mem:quarkus;DB_CLOSE_DELAY=-1;MODE=PostgreSQL")
+        .withEnv("CAMUNDA_DATABASE_USERNAME", "sa")
+        .withEnv("CAMUNDA_DATABASE_PASSWORD", "")
         .withEnv("ZEEBE_BROKER_EXPORTERS_RDBMS_CLASSNAME", "io.camunda.exporter.rdbms.RdbmsExporter")
         .waitingFor(Wait.forHttp("/v2/topology").forPort(8080)
             .forResponsePredicate(body -> body.contains("\"healthy\"") && body.contains("\"leader\"")))
