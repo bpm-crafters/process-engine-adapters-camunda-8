@@ -10,7 +10,13 @@ import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
 import dev.bpmcrafters.processengineapi.task.TaskType
 import dev.bpmcrafters.processengineapi.task.TaskHandler
 import io.camunda.client.CamundaClient
+import io.camunda.client.api.CamundaFuture
+import io.camunda.client.api.command.CompleteJobCommandStep1
 import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.response.CompleteJobResponse
+import io.camunda.client.api.response.UserTaskProperties
+import io.camunda.client.api.search.enums.JobKind
+import io.camunda.client.api.search.enums.ListenerEventType
 import io.camunda.client.api.worker.JobClient
 import io.camunda.client.api.worker.JobHandler
 import io.camunda.client.api.worker.JobWorker
@@ -22,6 +28,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
@@ -209,6 +216,132 @@ class C8AdapterLifecycleTest {
   }
 
   @Test
+  fun `stop drains real listener callbacks including completion before application disposal`() {
+    assertUserCallbacksDrain(listenerStrategy = true)
+  }
+
+  @Test
+  fun `stop drains real refreshing callbacks before application disposal and rejects queued callbacks`() {
+    assertUserCallbacksDrain(listenerStrategy = false)
+  }
+
+  private fun assertUserCallbacksDrain(listenerStrategy: Boolean) {
+    val entered = CountDownLatch(1)
+    val release = CountDownLatch(1)
+    val completionEntered = CountDownLatch(1)
+    val completionRelease = CountDownLatch(1)
+    val workerClosed = CountDownLatch(1)
+    val actions = AtomicInteger()
+    val disposed = AtomicInteger()
+    val repository = spy(InMemSubscriptionRepository())
+    repository.createTaskSubscription(TaskSubscriptionHandle(
+      taskType = TaskType.USER,
+      taskDescriptionKey = "user-task",
+      restrictions = emptyMap(),
+      payloadDescription = null,
+      action = { _, _ ->
+        actions.incrementAndGet()
+        entered.countDown()
+        check(release.await(30, TimeUnit.SECONDS)) { "handler was not released" }
+        assertThat(disposed.get()).`as`("application remains alive during callback").isZero()
+      },
+      termination = { _ -> }
+    ))
+    val client = mock<CamundaClient>()
+    val worker = mock<JobWorker>()
+    val builder = mock<JobWorkerBuilderStep1>()
+    val builder2 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep2>()
+    val builder3 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep3>()
+    val handlers = argumentCaptor<JobHandler>()
+    whenever(client.newWorker()).thenReturn(builder)
+    whenever(builder.jobType(any())).thenReturn(builder2)
+    whenever(builder2.handler(handlers.capture())).thenReturn(builder3)
+    whenever(builder3.name(any())).thenReturn(builder3)
+    whenever(builder3.maxJobsActive(any())).thenReturn(builder3)
+    whenever(builder3.streamEnabled(any())).thenReturn(builder3)
+    whenever(builder3.timeout(any<Long>())).thenReturn(builder3)
+    whenever(builder3.open()).thenReturn(worker)
+    doAnswer { workerClosed.countDown(); null }.whenever(worker).close()
+    val completion = mock<CompleteJobCommandStep1>()
+    val completed = mock<CamundaFuture<CompleteJobResponse>>()
+    whenever(client.newCompleteCommand(1234L)).thenReturn(completion)
+    whenever(completion.send()).thenReturn(completed)
+    whenever(completed.join()).thenAnswer {
+      completionEntered.countDown()
+      check(completionRelease.await(30, TimeUnit.SECONDS)) { "completion was not released" }
+      assertThat(disposed.get()).`as`("application remains alive through SDK completion").isZero()
+      null
+    }
+    val fixture = if (listenerStrategy) {
+      Fixture("CUSTOM", "LISTENER", emptyMap(), listener = ListenerUserTaskDelivery(client, repository))
+    } else {
+      Fixture("CUSTOM", "SUBSCRIPTION_REFRESHING", emptyMap(),
+        refresh = SubscribingRefreshingZeebeJobUserTaskDelivery(client, repository, "test-worker", 60000L))
+    }
+    val userTask = mock<UserTaskProperties> {
+      whenever(it.userTaskKey).thenReturn(5678L)
+    }
+    val job = mock<ActivatedJob> {
+      whenever(it.key).thenReturn(1234L)
+      whenever(it.elementId).thenReturn("user-task")
+      whenever(it.variablesAsMap).thenReturn(emptyMap())
+      whenever(it.customHeaders).thenReturn(emptyMap())
+      if (listenerStrategy) {
+        whenever(it.kind).thenReturn(JobKind.TASK_LISTENER)
+        whenever(it.listenerEventType).thenReturn(ListenerEventType.CREATING)
+        whenever(it.userTask).thenReturn(userTask)
+      }
+    }
+    val jobClient = mock<JobClient>()
+    val callbacks = Executors.newSingleThreadExecutor()
+    val stopper = Executors.newSingleThreadExecutor()
+    try {
+      fixture.lifecycle.start(null)
+      val admitted = callbacks.submit(Runnable { handlers.firstValue.handle(jobClient, job) })
+      assertThat(entered.await(5, TimeUnit.SECONDS)).`as`("application handler entered").isTrue()
+      val queued = callbacks.submit(Runnable { handlers.firstValue.handle(jobClient, job) })
+      val stopping = stopper.submit(Runnable {
+        fixture.lifecycle.stop(null)
+        disposed.incrementAndGet()
+      })
+      assertThat(workerClosed.await(5, TimeUnit.SECONDS)).`as`("worker acquisition stopped").isTrue()
+      assertThatThrownBy { stopping.get(200, TimeUnit.MILLISECONDS) }.isInstanceOf(TimeoutException::class.java)
+      assertThat(disposed.get()).isZero()
+      release.countDown()
+      if (listenerStrategy) {
+        assertThat(completionEntered.await(5, TimeUnit.SECONDS)).`as`("SDK completion entered").isTrue()
+        assertThatThrownBy { stopping.get(200, TimeUnit.MILLISECONDS) }.isInstanceOf(TimeoutException::class.java)
+        assertThat(disposed.get()).isZero()
+        completionRelease.countDown()
+      }
+      admitted.get(5, TimeUnit.SECONDS)
+      stopping.get(5, TimeUnit.SECONDS)
+      queued.get(5, TimeUnit.SECONDS)
+      verify(client).newWorker()
+      if (listenerStrategy) {
+        verify(client).newCompleteCommand(1234L)
+        verify(completion).send()
+        verify(completed).join()
+      }
+      verifyNoMoreInteractions(client)
+      clearInvocations(repository)
+      callbacks.submit(Runnable { handlers.firstValue.handle(jobClient, job) }).get(5, TimeUnit.SECONDS)
+      verifyNoInteractions(repository)
+      verifyNoMoreInteractions(client)
+      assertThat(actions.get()).isEqualTo(1)
+      assertThat(disposed.get()).isEqualTo(1)
+      verify(worker).close()
+    } finally {
+      release.countDown()
+      completionRelease.countDown()
+      callbacks.shutdown()
+      stopper.shutdown()
+      assertThat(callbacks.awaitTermination(5, TimeUnit.SECONDS)).`as`("callbacks terminated").isTrue()
+      assertThat(stopper.awaitTermination(5, TimeUnit.SECONDS)).`as`("stopper terminated").isTrue()
+    }
+  }
+
+  @Test
   fun `real service timeout still closes listener and reports incomplete cleanup`() {
     val entered = CountDownLatch(1)
     val release = CountDownLatch(1)
@@ -364,7 +497,7 @@ class C8AdapterLifecycleTest {
     order.verify(fixture.refresh).refresh()
     order.verify(fixture.executor).shutdown()
     order.verify(fixture.executor).awaitTermination(30, TimeUnit.SECONDS)
-    order.verify(fixture.refresh).unsubscribeAll()
+    order.verify(fixture.refresh).close()
   }
 
   @Test
@@ -451,7 +584,7 @@ class C8AdapterLifecycleTest {
     val fixture = Fixture("SUBSCRIPTION", "SUBSCRIPTION_REFRESHING", emptyMap())
     doThrow(IllegalStateException("subscribe")).whenever(fixture.refresh).subscribe()
     assertThatIllegalStateException().isThrownBy { fixture.lifecycle.start(null) }
-    verify(fixture.refresh).unsubscribeAll()
+    verify(fixture.refresh).close()
     verify(fixture.service).close()
     verifyNoInteractions(fixture.executor)
   }
@@ -618,11 +751,11 @@ class C8AdapterLifecycleTest {
     serviceStrategy: String,
     userStrategy: String,
     settings: Map<String, String>,
-    val service: SubscribingServiceTaskDelivery = mock()
+    val service: SubscribingServiceTaskDelivery = mock(),
+    val refresh: SubscribingRefreshingZeebeJobUserTaskDelivery = mock(),
+    val listener: ListenerUserTaskDelivery = mock()
   ) {
     val pull = mock<PullUserTaskDelivery>()
-    val refresh = mock<SubscribingRefreshingZeebeJobUserTaskDelivery>()
-    val listener = mock<ListenerUserTaskDelivery>()
     val registration = mock<GlobalUserTaskListenerRegistrationHelper>()
     val executor = mock<ScheduledExecutorService>()
     val future = mock<ScheduledFuture<*>>()

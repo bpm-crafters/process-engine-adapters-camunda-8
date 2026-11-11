@@ -503,11 +503,88 @@ class SubscribingRefreshingZeebeJobUserTaskDeliveryTest {
   }
 
   @Test
+  fun `should reuse the active worker on repeated subscribe and close it once`() {
+    val fixture = WorkerFixture()
+    try {
+      fixture.delivery.subscribe()
+      fixture.delivery.subscribe()
+
+      verify(fixture.client).newWorker()
+      assertThat(fixture.handlers.allValues).hasSize(1)
+      assertThat(fixture.workers).hasSize(1)
+      fixture.handlers.firstValue.handle(mock(), activatedJob())
+      assertThat(fixture.deliveries).hasSize(1)
+    } finally {
+      fixture.delivery.unsubscribeAll()
+    }
+    verify(fixture.workers.single()).close()
+    fixture.delivery.unsubscribeAll()
+    verify(fixture.workers.single()).close()
+  }
+
+  @Test
+  fun `should open only newly added subscriptions while retaining the active worker`() {
+    val fixture = WorkerFixture()
+    fixture.delivery.subscribe()
+    val original = fixture.workers.single()
+    val added = fixture.newSubscription()
+    try {
+      fixture.delivery.subscribe()
+      assertThat(fixture.workers).hasSize(2)
+      assertThat(fixture.handlers.allValues).hasSize(2)
+      verify(original, never()).close()
+      fixture.handlers.secondValue.handle(mock(), activatedJob())
+      assertThat(fixture.repository.getActiveSubscriptionForTask(TASK_ID)).isSameAs(added)
+    } finally {
+      fixture.delivery.unsubscribeAll()
+    }
+    fixture.workers.forEach { verify(it).close() }
+  }
+
+  @Test
+  fun `should not attempt a failing replacement for an active subscription`() {
+    val fixture = WorkerFixture()
+    fixture.delivery.subscribe()
+    val originalWorker = fixture.workers.single()
+    fixture.onOpen = { error("replacement must not be opened") }
+    try {
+      fixture.delivery.subscribe()
+
+      verify(fixture.client).newWorker()
+      fixture.handlers.firstValue.handle(mock(), activatedJob())
+      assertThat(fixture.deliveries).hasSize(1)
+    } finally {
+      fixture.delivery.unsubscribeAll()
+    }
+    verify(originalWorker).close()
+  }
+
+  @Test
+  fun `should reuse a pending registration on reentrant subscribe`() {
+    val fixture = WorkerFixture()
+    fixture.onOpen = {
+      fixture.onOpen = {}
+      fixture.delivery.subscribe()
+    }
+    try {
+      fixture.delivery.subscribe()
+
+      verify(fixture.client).newWorker()
+      assertThat(fixture.handlers.allValues).hasSize(1)
+      assertThat(fixture.workers).hasSize(1)
+    } finally {
+      fixture.delivery.unsubscribeAll()
+    }
+    verify(fixture.workers.single()).close()
+  }
+
+  @Test
   fun `should not remove a newer registration when an older opening fails`() {
     val fixture = WorkerFixture()
     val failure = IllegalStateException("older opening failed")
     fixture.onOpen = {
       fixture.onOpen = {}
+      fixture.delivery.unsubscribe(fixture.subscription)
       fixture.delivery.subscribe()
       throw failure
     }

@@ -85,7 +85,7 @@ class C8AdapterLifecycle @Inject constructor(
       C8AdapterBuildTimeConfig.UserStrategy.SCHEDULED -> schedule(pulls.get()::refresh)
       C8AdapterBuildTimeConfig.UserStrategy.SUBSCRIPTION_REFRESHING -> {
         val delivery = refreshing.get()
-        cleanup.add(AutoCloseable { delivery.unsubscribeAll() })
+        cleanup.add(AutoCloseable { delivery.close() })
         delivery.subscribe()
         schedule(delivery::refresh)
       }

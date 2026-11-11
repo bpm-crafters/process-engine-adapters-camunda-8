@@ -14,50 +14,35 @@ import io.camunda.client.api.command.ClientHttpException
 import io.camunda.client.api.command.ClientStatusException
 import io.camunda.client.api.command.StreamJobsCommandStep1.StreamJobsCommandStep3
 import io.camunda.client.api.response.ActivatedJob
-import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.camunda.zeebe.protocol.Protocol
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.Status
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
+import java.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
-class SubscribingRefreshingZeebeJobUserTaskDelivery(
+class SubscribingRefreshingZeebeJobUserTaskDelivery @JvmOverloads constructor(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
   private val workerId: String,
   private val userTaskLockTimeoutMs: Long,
-) : SubscribingUserTaskDelivery, RefreshableDelivery {
+  private val shutdownTimeout: Duration = Duration.ofSeconds(30)
+) : SubscribingUserTaskDelivery, RefreshableDelivery, AutoCloseable {
 
-  private class RegisteredWorker {
-    val acceptingJobs = AtomicBoolean(true)
-    // Cancellation may precede open(); only one side may claim the attached worker for closing.
-    private val worker = AtomicReference<JobWorker?>()
-
-    fun attach(openedWorker: JobWorker) {
-      worker.set(openedWorker)
-      if (!acceptingJobs.get()) worker.getAndSet(null)?.close()
-    }
-
-    fun cancel(): JobWorker? {
-      acceptingJobs.set(false)
-      return worker.getAndSet(null)
-    }
-  }
-
-  private val jobWorkerRegistry = mutableMapOf<TaskSubscription, RegisteredWorker>()
-  private val lifecycleMonitor = Any()
+  private val jobWorkerRegistry = mutableMapOf<TaskSubscription, UserTaskWorkerLifecycle.Registration>()
+  private val lifecycle = UserTaskWorkerLifecycle(shutdownTimeout)
   private val refreshMonitor = Any()
 
   fun subscribe() {
     // Publish the whole batch before opening so callbacks can cancel pending workers too.
-    val registrations = synchronized(lifecycleMonitor) {
+    val registrations = synchronized(lifecycle.monitor) {
+      lifecycle.checkSubscriptionAllowed()
       subscriptionRepository.getTaskSubscriptions()
         .filter { it.taskType == TaskType.USER }
+        .filter { jobWorkerRegistry[it]?.accepting != true }
         .map { subscription ->
-          val registration = RegisteredWorker()
+          val registration = lifecycle.register()
           jobWorkerRegistry[subscription] = registration
           subscription to registration
         }
@@ -69,11 +54,13 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
     logger.trace { "PROCESS-ENGINE-C8-040: subscribing user tasks for subscriptions: ${registrations.map { it.first }}" }
     try {
       registrations.forEach { (activeSubscription, registration) ->
-        if (registration.acceptingJobs.get()) {
-          val subscribedJobWorker = camundaClient
+        lifecycle.open(registration) {
+          camundaClient
             .newWorker()
             .jobType(Protocol.USER_TASK_JOB_TYPE)
-            .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient, registration.acceptingJobs) }
+            .handler { _, job -> lifecycle.deliver(registration) { accepting ->
+              consumeActivatedJob(activeSubscription, job, camundaClient, accepting)
+            } }
             .maxJobsActive(Integer.MAX_VALUE)
             .name(workerId)
             .timeout(userTaskLockTimeoutMs)
@@ -81,18 +68,22 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
             .forSubscription(activeSubscription)
             // FIXME -> metrics to setup
             .open()
-          registration.attach(subscribedJobWorker)
         }
       }
     } catch (error: Throwable) {
-      val workers = synchronized(lifecycleMonitor) {
-        registrations.mapNotNull { (subscription, registration) ->
-          val worker = registration.cancel()
+      synchronized(lifecycle.monitor) {
+        registrations.forEach { (subscription, registration) ->
           jobWorkerRegistry.remove(subscription, registration)
-          worker
         }
       }
-      closeWorkers(workers, error)
+      try {
+        lifecycle.cancel(registrations.map { it.second })
+      } catch (cleanupError: Throwable) {
+        if (cleanupError !== error) error.addSuppressed(cleanupError)
+      }
+      throw error
+    } finally {
+      registrations.forEach { lifecycle.settle(it.second) }
     }
   }
 
@@ -100,10 +91,10 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
     activeSubscription: TaskSubscriptionHandle,
     job: ActivatedJob,
     zeebeClient: CamundaClient,
-    acceptingJobs: AtomicBoolean
+    acceptingJobs: Boolean
   ) {
     // Closing a worker does not prevent outstanding poll responses from invoking its handler.
-    if (!acceptingJobs.get()) {
+    if (!acceptingJobs) {
       logger.trace { "PROCESS-ENGINE-C8-057: Returning user task ${job.key} received after unsubscribe." }
       zeebeClient.newFailCommand(job.key).retries(job.retries).send().join()
       return
@@ -190,35 +181,36 @@ class SubscribingRefreshingZeebeJobUserTaskDelivery(
 
   override fun unsubscribe(taskSubscription: TaskSubscription) {
     logger.debug { "PROCESS-ENGINE-C8-054: Unsubscribe from user task: $taskSubscription" }
-    val worker = synchronized(lifecycleMonitor) {
-      jobWorkerRegistry.remove(taskSubscription)?.cancel()
+    val registration = synchronized(lifecycle.monitor) {
+      jobWorkerRegistry.remove(taskSubscription)?.also { it.accepting = false }
     }
-    worker?.close()
+    registration?.let { lifecycle.cancel(listOf(it)) }
   }
 
+  /** Cancels acquisition without draining callbacks/openings; late callbacks return jobs until close(). */
   fun unsubscribeAll() {
     logger.debug { "PROCESS-ENGINE-C8-055: Unsubscribe all user tasks." }
-    val workers = synchronized(lifecycleMonitor) {
-      jobWorkerRegistry.values.mapNotNull { it.cancel() }.also { jobWorkerRegistry.clear() }
-    }
-    closeWorkers(workers)
-  }
-
-  private fun closeWorkers(workers: List<JobWorker>, initialFailure: Throwable? = null) {
-    var failure = initialFailure
-    workers.forEach { worker ->
-      try {
-        worker.close()
-      } catch (error: Throwable) {
-        val previousFailure = failure
-        if (previousFailure == null) {
-          failure = error
-        } else if (previousFailure !== error) {
-          previousFailure.addSuppressed(error)
-        }
+    val registrations = synchronized(lifecycle.monitor) {
+      jobWorkerRegistry.values.toList().also { batch ->
+        batch.forEach { it.accepting = false }
+        jobWorkerRegistry.clear()
       }
     }
-    failure?.let { throw it }
+    lifecycle.cancel(registrations)
+  }
+
+  /**
+   * Stops acquisition and drains whole callbacks/openings within shutdownTimeout (default 30 seconds).
+   * Queued callbacks are ignored without SDK commands, including those from previously unsubscribed workers.
+   * Timeout, interruption and self/concurrent drain report failure; incomplete work remains tracked for retry.
+   * External refresh schedulers and the client remain caller-owned and must be stopped separately.
+   */
+  override fun close() {
+    try {
+      lifecycle.close()
+    } finally {
+      synchronized(lifecycle.monitor) { jobWorkerRegistry.entries.removeAll { !it.value.accepting } }
+    }
   }
 
   /*
