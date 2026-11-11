@@ -20,6 +20,7 @@
   <properties>
     <!-- COMMON GLOBAL -->
     <process-engine-api.version>1.7</process-engine-api.version>
+    <process-engine-api-testing.version>2026.10.1</process-engine-api-testing.version>
     <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
 
     <!-- C8 -->
@@ -41,6 +42,7 @@
   <modules>
     <module>engine-adapter/adapter-testing</module>
     <module>engine-adapter/c8-core</module>
+    <module>engine-adapter/c8-testing</module>
     <module>engine-adapter/c8-spring-boot-starter</module>
     <module>bom</module>
     <!-- more modules see profiles -->
@@ -71,6 +73,19 @@
         <groupId>dev.bpm-crafters.process-engine-api</groupId>
         <artifactId>process-engine-api-impl</artifactId>
         <version>${process-engine-api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>dev.bpm-crafters.process-engine-api-testing</groupId>
+        <artifactId>process-engine-api-testing-bom</artifactId>
+        <version>${process-engine-api-testing.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+      <dependency>
+        <groupId>dev.bpm-crafters.process-engine-api-testing</groupId>
+        <artifactId>process-engine-api-testing-contract</artifactId>
+        <version>${process-engine-api-testing.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.assertj</groupId>

@@ -5,6 +5,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.correlation.SignalApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.decision.EvaluateDecisionApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.deploy.DeploymentApiImpl
 import dev.bpmcrafters.processengineapi.adapter.c8.process.StartProcessApiImpl
+import dev.bpmcrafters.processengineapi.adapter.c8.process.MessageStartInstanceResolutionConfiguration
 import dev.bpmcrafters.processengineapi.adapter.c8.task.SubscribingUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.subscription.C8TaskSubscriptionApiImpl
 import dev.bpmcrafters.processengineapi.correlation.CorrelationApi
@@ -32,8 +33,12 @@ class C8AdapterAutoConfiguration {
 
   @Bean("c8-start-process-api")
   @Qualifier("c8-start-process-api")
-  fun startProcessApi(camundaClient: CamundaClient): StartProcessApi = StartProcessApiImpl(
-    camundaClient = camundaClient
+  fun startProcessApi(camundaClient: CamundaClient, c8AdapterProperties: C8AdapterProperties): StartProcessApi = StartProcessApiImpl(
+    camundaClient = camundaClient,
+    messageStartInstanceResolutionConfiguration = MessageStartInstanceResolutionConfiguration(
+      timeout = java.time.Duration.ofMillis(c8AdapterProperties.startByMessage.timeoutInMilliseconds),
+      maxTimeout = java.time.Duration.ofMillis(c8AdapterProperties.startByMessage.maxTimeoutInMilliseconds),
+    ),
   )
 
   @Bean("c8-task-completion-api")

@@ -23,7 +23,11 @@ class C8AdapterProperties(
    * Configuration of user tasks.
    */
   @NestedConfigurationProperty
-  val userTasks: UserTasks
+  val userTasks: UserTasks,
+
+  /** Configuration of process starts. */
+  @NestedConfigurationProperty
+  val startByMessage: StartByMessage = StartByMessage(),
 ) {
 
   companion object {
@@ -121,6 +125,13 @@ class C8AdapterProperties(
      * Enables one-shot startup preload of already-created user tasks.
      */
     val preloadExistingTasks: Boolean = true,
+  )
+
+  data class StartByMessage(
+    /** Delay in milliseconds between searches for the instance created by a message start. Set to -1 to disable the lookup. */
+    val timeoutInMilliseconds: Long = 100L,
+    /** Maximum time in milliseconds spent searching for the instance created by a message start. */
+    val maxTimeoutInMilliseconds: Long = 5000L,
   )
 
   /**

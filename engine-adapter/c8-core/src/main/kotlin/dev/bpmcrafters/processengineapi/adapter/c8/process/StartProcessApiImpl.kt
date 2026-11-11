@@ -8,15 +8,17 @@ import io.camunda.client.CamundaClient
 import io.camunda.client.api.command.CreateProcessInstanceCommandStep1.CreateProcessInstanceCommandStep3
 import io.camunda.client.api.command.PublishMessageCommandStep1.PublishMessageCommandStep3
 import io.camunda.client.api.response.ProcessInstanceEvent
-import io.camunda.client.api.response.PublishMessageResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.time.Duration.ofSeconds
 import java.util.concurrent.CompletableFuture
 
 private val logger = KotlinLogging.logger {}
 
-class StartProcessApiImpl(
-  private val camundaClient: CamundaClient
+class StartProcessApiImpl @JvmOverloads constructor(
+  private val camundaClient: CamundaClient,
+  messageStartInstanceResolutionConfiguration: MessageStartInstanceResolutionConfiguration = MessageStartInstanceResolutionConfiguration(),
 ) : StartProcessApi {
+  private val messageStartInstanceResolver = MessageStartInstanceResolver(camundaClient, messageStartInstanceResolutionConfiguration)
 
   override fun startProcess(cmd: StartProcessCommand): CompletableFuture<ProcessInformation> {
     return when (cmd) {
@@ -40,16 +42,17 @@ class StartProcessApiImpl(
           camundaClient
             .newPublishMessageCommand()
             .messageName(cmd.messageName)
-            .correlationKey("") // empty means create a new instance
+            .withoutCorrelationKey()
             .variables(cmd.payloadSupplier.get())
             .applyRestrictions(ensureSupported(cmd.restrictions))
             .send()
             .get()
-            .toProcessInformation()
+            .let(messageStartInstanceResolver::resolve)
         }
 
       is StartProcessByDefinitionAtElementCmd ->
         CompletableFuture.supplyAsync {
+          logger.debug { "PROCESS-ENGINE-C8-006: Starting a new process instance by definition ${cmd.definitionKey} at element ${cmd.elementId}." }
           camundaClient
             .newCreateInstanceCommand()
             .bpmnProcessId(cmd.definitionKey)
@@ -71,7 +74,8 @@ class StartProcessApiImpl(
   }
 
   override fun getSupportedRestrictions(): Set<String> = setOf(
-    CommonRestrictions.TENANT_ID
+    CommonRestrictions.TENANT_ID,
+    CommonRestrictions.PROCESS_DEFINITION_KEY,
   )
 
   private fun CreateProcessInstanceCommandStep3.applyRestrictions(restrictions: Map<String, String>): CreateProcessInstanceCommandStep3 = this.apply {
@@ -81,6 +85,7 @@ class StartProcessApiImpl(
           CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) {
             this.tenantId(value)
           }
+          CommonRestrictions.PROCESS_DEFINITION_KEY -> Unit
         }
       }
   }
@@ -92,6 +97,7 @@ class StartProcessApiImpl(
           CommonRestrictions.TENANT_ID -> if (value.isNotEmpty()) {
             this.tenantId(value)
           }
+          CommonRestrictions.PROCESS_DEFINITION_KEY -> Unit
         }
       }
   }
@@ -102,14 +108,8 @@ class StartProcessApiImpl(
     meta = mapOf(
       CommonRestrictions.PROCESS_DEFINITION_ID to "${this.processDefinitionKey}",
       CommonRestrictions.PROCESS_DEFINITION_KEY to this.bpmnProcessId,
+      CommonRestrictions.PROCESS_INSTANCE_ID to "${this.processInstanceKey}",
       CommonRestrictions.TENANT_ID to this.tenantId,
-    )
-  )
-
-  private fun PublishMessageResponse.toProcessInformation() = ProcessInformation(
-    instanceId = "",
-    meta = mapOf(
-      CommonRestrictions.TENANT_ID to this.tenantId
     )
   )
 
