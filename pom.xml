@@ -38,7 +38,7 @@
     <c8-core.commons-codec.version>1.21.0</c8-core.commons-codec.version>
 
     <!-- C8 -->
-    <camunda.version>8.10.7</camunda.version>
+    <camunda.version>8.10.9</camunda.version>
     <camunda.test.version>${camunda.version}</camunda.test.version>
     <spring-boot.version>4.1.0</spring-boot.version>
     <quarkus.version>3.40.1.1</quarkus.version>
