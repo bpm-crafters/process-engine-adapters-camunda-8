@@ -62,6 +62,13 @@
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>
+        <configuration>
+          <compilerPlugins combine.self="override">
+            <plugin>spring</plugin>
+            <plugin>no-arg</plugin>
+            <plugin>all-open</plugin>
+          </compilerPlugins>
+        </configuration>
         <executions>
           <execution>
             <id>kapt</id>

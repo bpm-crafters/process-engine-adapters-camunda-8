@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_QuarkusMessageStart" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="quarkus-message-start" name="Quarkus message start" isExecutable="true">
+    <bpmn:startEvent id="MessageReceived" name="Message received">
+      <bpmn:outgoing>Flow_RecordMessage</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageStartDefinition" messageRef="QuarkusStartMessage" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="RecordMessage" name="Record message">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="quarkus-message-observed" retries="3" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_RecordMessage</bpmn:incoming>
+      <bpmn:outgoing>Flow_MessageRecorded</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="MessageRecorded" name="Message recorded">
+      <bpmn:incoming>Flow_MessageRecorded</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_RecordMessage" sourceRef="MessageReceived" targetRef="RecordMessage" />
+    <bpmn:sequenceFlow id="Flow_MessageRecorded" sourceRef="RecordMessage" targetRef="MessageRecorded" />
+  </bpmn:process>
+  <bpmn:message id="QuarkusStartMessage" name="quarkus-start-message" />
+  <bpmndi:BPMNDiagram id="Diagram_QuarkusMessageStart">
+    <bpmndi:BPMNPlane id="Plane_QuarkusMessageStart" bpmnElement="quarkus-message-start">
+      <bpmndi:BPMNShape id="MessageReceived_di" bpmnElement="MessageReceived">
+        <dc:Bounds x="160" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="135" y="165" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordMessage_di" bpmnElement="RecordMessage">
+        <dc:Bounds x="280" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MessageRecorded_di" bpmnElement="MessageRecorded">
+        <dc:Bounds x="464" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="438" y="165" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_RecordMessage_di" bpmnElement="Flow_RecordMessage">
+        <di:waypoint x="196" y="140" />
+        <di:waypoint x="280" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MessageRecorded_di" bpmnElement="Flow_MessageRecorded">
+        <di:waypoint x="380" y="140" />
+        <di:waypoint x="464" y="140" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

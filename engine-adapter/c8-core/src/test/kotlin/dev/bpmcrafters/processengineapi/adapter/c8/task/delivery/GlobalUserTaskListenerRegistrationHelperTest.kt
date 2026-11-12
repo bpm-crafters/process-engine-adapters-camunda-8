@@ -134,6 +134,7 @@ internal class GlobalUserTaskListenerRegistrationHelperTest {
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessageContaining("Failed to auto-register Camunda global user task listener '$LISTENER_ID'")
       .hasMessageContaining("permissions")
+      .hasMessageContaining("require Camunda 8.9+")
   }
 
   private fun matchingGlobalListener(): GlobalTaskListener =

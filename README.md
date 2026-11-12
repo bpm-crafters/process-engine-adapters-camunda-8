@@ -34,6 +34,8 @@ respective [repository](https://github.com/bpm-crafters/process-engine-api-docs)
 
 ## Usage
 
+### Spring Boot
+
 If you want to start usage, please add the adapter starter to your Maven project:
 
 ```xml
@@ -83,12 +85,31 @@ working `examples/java-c8-sb3` sample:
 </dependency>
 ```
 
+### Quarkus
+
+Use the Quarkus extension for CDI wiring and task delivery:
+
+```xml
+<dependency>
+  <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
+  <artifactId>process-engine-adapter-camunda-platform-c8-quarkus</artifactId>
+  <version>${process-engine-adapter-camunda-platform-c8.version}</version>
+</dependency>
+```
+
+The Quarkus extension targets Quarkus 3.37.3+ and Java 17+.
+It uses the official Camunda Java Client, included transitively.
+The currently verified combination is Quarkus 3.40.1.1 with Camunda client/server 8.10.7.
+
 ## Anatomy
 
 The library contains of the following Maven modules:
 
-- `process-engine-adapters-camunda-platform-c8-embedded-core`: Camunda 8 Platform Embedded Adapter implementation
-- `process-engine-adapters-camunda-platform-c8-embedded-spring-boot-starter`: Camunda 8 Platform Embedded Adapter Spring Boot Starter
+- `process-engine-adapter-camunda-platform-c8-core`: framework-independent Camunda 8 adapter implementation
+- `process-engine-adapter-camunda-platform-c8-spring-boot-starter`: Spring Boot wiring for the adapter
+- `process-engine-adapter-camunda-platform-c8-quarkus`: Quarkus extension runtime (`engine-adapter/c8-quarkus/runtime`)
+- `process-engine-adapter-camunda-platform-c8-quarkus-deployment`: Quarkus build-time integration, resolved automatically (`engine-adapter/c8-quarkus/deployment`)
+- `engine-adapter/c8-quarkus/integration-tests`: non-published JVM verification application
 - `process-engine-adapter-camunda-platform-c8-bom`: Maven BOM with providing dependencies and versions
 
 and provide other required dependencies, such as `camunda-spring-boot-starter` or
