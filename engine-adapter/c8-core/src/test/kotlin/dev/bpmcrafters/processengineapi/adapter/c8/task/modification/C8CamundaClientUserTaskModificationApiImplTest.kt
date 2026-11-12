@@ -201,7 +201,9 @@ class C8CamundaClientUserTaskModificationApiImplTest {
   @Test
   fun `unsupported commands are not supported`() {
     assertThrows(UnsupportedOperationException::class.java) {
-      modificationApi.update(ChangeAssignmentModifyTaskCmd.AssignTaskCmd(TASK_ID, "demo"))
+      modificationApi.update(ChangeAssignmentModifyTaskCmd.AddCandidateUserTaskCmd(TASK_ID, "demo"))
     }
+
+    verify(exactly = 0) { camundaClient.newUpdateUserTaskCommand(any()) }
   }
 }

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" targetNamespace="c8-contract" exporter="Camunda Modeler" exporterVersion="5.46.1">
+  <bpmn:message id="continueMessage" name="contract.continue">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=correlationKey" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:signal id="continueSignal" name="contract.continue.signal" />
+  <bpmn:process id="contract-message-and-signal" isExecutable="true">
+    <bpmn:startEvent id="start" name="Start process">
+      <bpmn:outgoing>toMessage</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="messageWait" name="Wait for continuation message">
+      <bpmn:incoming>toMessage</bpmn:incoming>
+      <bpmn:outgoing>toSignal</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="continueMessage" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="signalWait" name="Wait for continuation signal">
+      <bpmn:incoming>toSignal</bpmn:incoming>
+      <bpmn:outgoing>toEnd</bpmn:outgoing>
+      <bpmn:signalEventDefinition signalRef="continueSignal" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="end" name="Process completed">
+      <bpmn:incoming>toEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="toMessage" sourceRef="start" targetRef="messageWait" />
+    <bpmn:sequenceFlow id="toSignal" sourceRef="messageWait" targetRef="signalWait" />
+    <bpmn:sequenceFlow id="toEnd" sourceRef="signalWait" targetRef="end" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_contract-message-and-signal">
+    <bpmndi:BPMNPlane id="Plane_contract-message-and-signal" bpmnElement="contract-message-and-signal">
+      <bpmndi:BPMNShape id="Shape_signalWait" bpmnElement="signalWait">
+        <dc:Bounds x="360" y="111" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="355" y="161" width="60" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="end">
+        <dc:Bounds x="492" y="118" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="485" y="154" width="51" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_messageWait" bpmnElement="messageWait">
+        <dc:Bounds x="265" y="111" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="260" y="161" width="60" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="start">
+        <dc:Bounds x="172" y="118" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="158" y="154" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_toMessage" bpmnElement="toMessage">
+        <di:waypoint x="208" y="136" />
+        <di:waypoint x="265" y="136" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="190" y="114" width="120" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_toSignal" bpmnElement="toSignal">
+        <di:waypoint x="315" y="136" />
+        <di:waypoint x="360" y="136" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="510" y="114" width="110" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_toEnd" bpmnElement="toEnd">
+        <di:waypoint x="410" y="136" />
+        <di:waypoint x="492" y="136" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="830" y="114" width="120" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

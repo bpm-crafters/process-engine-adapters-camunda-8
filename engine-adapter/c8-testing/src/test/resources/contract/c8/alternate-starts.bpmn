@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" targetNamespace="c8-contract" exporter="Camunda Modeler" exporterVersion="5.46.1">
+  <bpmn:message id="startMessage" name="contract.start" />
+  <bpmn:process id="contract-alternate-starts" isExecutable="true">
+    <bpmn:startEvent id="start" name="Start process">
+      <bpmn:outgoing>toStartMerge</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="messageStart" name="Start by message">
+      <bpmn:outgoing>messageToStartMerge</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="startMessage" />
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="startMerge">
+      <bpmn:incoming>toStartMerge</bpmn:incoming>
+      <bpmn:incoming>messageToStartMerge</bpmn:incoming>
+      <bpmn:outgoing>toApproval</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="approval" name="Approve request">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>toApproval</bpmn:incoming>
+      <bpmn:outgoing>toEnd</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="end" name="Request approved">
+      <bpmn:incoming>toEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="toStartMerge" sourceRef="start" targetRef="startMerge" />
+    <bpmn:sequenceFlow id="messageToStartMerge" sourceRef="messageStart" targetRef="startMerge" />
+    <bpmn:sequenceFlow id="toApproval" sourceRef="startMerge" targetRef="approval" />
+    <bpmn:sequenceFlow id="toEnd" sourceRef="approval" targetRef="end" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_contract-alternate-starts">
+    <bpmndi:BPMNPlane id="Plane_contract-alternate-starts" bpmnElement="contract-alternate-starts">
+      <bpmndi:BPMNShape id="Shape_startMerge" bpmnElement="startMerge" isMarkerVisible="true">
+        <dc:Bounds x="330" y="193" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="328" y="211" width="62" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_start" bpmnElement="start">
+        <dc:Bounds x="182" y="100" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="168" y="143" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_messageStart" bpmnElement="messageStart">
+        <dc:Bounds x="182" y="300" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="157" y="343" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_approval" bpmnElement="approval">
+        <dc:Bounds x="435" y="178" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_end" bpmnElement="end">
+        <dc:Bounds x="622" y="200" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="595" y="243" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_toStartMerge" bpmnElement="toStartMerge">
+        <di:waypoint x="218" y="118" />
+        <di:waypoint x="355" y="118" />
+        <di:waypoint x="355" y="193" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="357" y="100" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_messageToStartMerge" bpmnElement="messageToStartMerge">
+        <di:waypoint x="218" y="318" />
+        <di:waypoint x="355" y="318" />
+        <di:waypoint x="355" y="243" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="288" y="325" width="65" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_toApproval" bpmnElement="toApproval">
+        <di:waypoint x="380" y="218" />
+        <di:waypoint x="435" y="218" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="500" y="196" width="100" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_toEnd" bpmnElement="toEnd">
+        <di:waypoint x="565" y="218" />
+        <di:waypoint x="622" y="218" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="775" y="196" width="87" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
