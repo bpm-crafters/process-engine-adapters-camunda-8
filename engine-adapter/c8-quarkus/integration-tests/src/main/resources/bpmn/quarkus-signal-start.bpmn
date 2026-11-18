@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_QuarkusSignalStart" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="quarkus-signal-start" name="Quarkus signal start" isExecutable="true">
+    <bpmn:startEvent id="SignalReceived" name="Signal received">
+      <bpmn:outgoing>Flow_RecordSignal</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SignalStartDefinition" signalRef="QuarkusStartSignal" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="RecordSignal" name="Record signal">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="quarkus-signal-observed" retries="3" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_RecordSignal</bpmn:incoming>
+      <bpmn:outgoing>Flow_SignalRecorded</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="SignalRecorded" name="Signal recorded">
+      <bpmn:incoming>Flow_SignalRecorded</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_RecordSignal" sourceRef="SignalReceived" targetRef="RecordSignal" />
+    <bpmn:sequenceFlow id="Flow_SignalRecorded" sourceRef="RecordSignal" targetRef="SignalRecorded" />
+  </bpmn:process>
+  <bpmn:signal id="QuarkusStartSignal" name="quarkus-start-signal" />
+  <bpmndi:BPMNDiagram id="Diagram_QuarkusSignalStart">
+    <bpmndi:BPMNPlane id="Plane_QuarkusSignalStart" bpmnElement="quarkus-signal-start">
+      <bpmndi:BPMNShape id="SignalReceived_di" bpmnElement="SignalReceived">
+        <dc:Bounds x="160" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="140" y="165" width="76" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordSignal_di" bpmnElement="RecordSignal">
+        <dc:Bounds x="280" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SignalRecorded_di" bpmnElement="SignalRecorded">
+        <dc:Bounds x="464" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="443" y="165" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_RecordSignal_di" bpmnElement="Flow_RecordSignal">
+        <di:waypoint x="196" y="140" />
+        <di:waypoint x="280" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SignalRecorded_di" bpmnElement="Flow_SignalRecorded">
+        <di:waypoint x="380" y="140" />
+        <di:waypoint x="464" y="140" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

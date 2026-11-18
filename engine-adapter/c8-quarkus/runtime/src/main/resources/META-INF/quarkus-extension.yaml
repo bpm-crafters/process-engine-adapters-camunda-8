@@ -1,0 +1,10 @@
+name: Process Engine API - Camunda 8
+description: Camunda 8 adapters for the BPM Crafters Process Engine API
+metadata:
+  keywords:
+    - camunda
+    - process-engine-api
+    - bpmn
+  categories:
+    - integration
+  status: experimental

@@ -62,10 +62,17 @@ class PullUserTaskDelivery(
                   }
                 }
 
-                val result = variableRequest.withFullValues().send().join().items()
+                val result = variableRequest.send().join().items()
 
                 val variablesFromTask = result.associate { variable ->
-                  variable.name to variable.value
+                  val value = if (variable.isTruncated == true) {
+                    val key = requireNotNull(variable.variableKey) { "Missing key for truncated variable '${variable.name}'." }
+                    require(key > 0) { "Invalid key for truncated variable '${variable.name}': $key." }
+                    camundaClient.newVariableGetRequest(key).send().join().value
+                  } else {
+                    variable.value
+                  }
+                  variable.name to value
                 }.asJson().parseJson(jacksonObjectMapper())
 
                 val variables = variablesFromTask.filterBySubscription(activeSubscription)
