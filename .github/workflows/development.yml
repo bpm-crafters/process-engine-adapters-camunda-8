@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - develop
+      - release/*
   pull_request:
     branches:
       - '*'         # matches every branch that doesn't contain a '/'
