@@ -2,13 +2,16 @@ package dev.bpmcrafters.processengineapi.adapter.c8.springboot.schedule
 
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
+import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationRunningEvent
+import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationStoppingEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.event.EventListener
 import org.springframework.scheduling.TaskScheduler
-import org.springframework.scheduling.annotation.SchedulingConfigurer
-import org.springframework.scheduling.config.ScheduledTaskRegistrar
 import java.time.Duration
+import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.ScheduledFuture
 
 private val logger = KotlinLogging.logger {}
 
@@ -17,19 +20,35 @@ class RefreshingUserTaskDeliveryBinding(
   private val c8AdapterProperties: C8AdapterProperties,
   @param:Qualifier("c8-task-scheduler")
   private val c8taskScheduler: TaskScheduler
-) : SchedulingConfigurer {
+) {
 
-  override fun configureTasks(taskRegistrar: ScheduledTaskRegistrar) {
-    taskRegistrar.setScheduler(c8taskScheduler)
-    taskRegistrar.addFixedRateTask(
-      {
-        logger.trace { "PROCESS-ENGINE-C7-REMOTE-104: Refreshing user tasks..." }
-        subscribingRefreshingZeebeJobUserTaskDelivery.refresh()
-        logger.trace { "PROCESS-ENGINE-C7-REMOTE-105: Refreshed user tasks." }
-      },
-      Duration.of(c8AdapterProperties.userTasks.scheduleDeliveryFixedRateInSeconds, ChronoUnit.SECONDS)
+  private var scheduledDelivery: ScheduledFuture<*>? = null
+
+  @EventListener
+  @Synchronized
+  fun start(event: ProcessApplicationRunningEvent) {
+    if (scheduledDelivery != null) {
+      return
+    }
+
+    val refreshInterval = Duration.of(c8AdapterProperties.userTasks.scheduleDeliveryFixedRateInSeconds, ChronoUnit.SECONDS)
+    scheduledDelivery = c8taskScheduler.scheduleAtFixedRate(
+      { refresh() },
+      Instant.now().plus(refreshInterval),
+      refreshInterval
     )
   }
 
+  @EventListener
+  @Synchronized
+  fun stop(event: ProcessApplicationStoppingEvent) {
+    scheduledDelivery?.cancel(false)
+    scheduledDelivery = null
+  }
 
+  private fun refresh() {
+    logger.trace { "PROCESS-ENGINE-C7-REMOTE-104: Refreshing user tasks..." }
+    subscribingRefreshingZeebeJobUserTaskDelivery.refresh()
+    logger.trace { "PROCESS-ENGINE-C7-REMOTE-105: Refreshed user tasks." }
+  }
 }

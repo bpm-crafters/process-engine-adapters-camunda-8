@@ -5,6 +5,7 @@ import dev.bpmcrafters.processengineapi.task.TaskHandler
 import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskTerminationHandler
 import dev.bpmcrafters.processengineapi.impl.task.TaskSubscriptionHandle
+import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.CamundaFuture
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Duration
 
@@ -45,6 +47,43 @@ class SubscribingServiceTaskDeliveryTest {
     retryTimeoutInSeconds = 10,
     lockDurationInSeconds = 60
   )
+
+  @Test
+  fun `should close service task workers when stopped`() {
+    val subscription = TaskSubscriptionHandle(
+      taskType = TaskType.EXTERNAL,
+      taskDescriptionKey = TOPIC,
+      restrictions = emptyMap(),
+      payloadDescription = null,
+      action = { _, _ -> },
+      termination = { _ -> }
+    )
+    val subscriptionRepository = mock<SubscriptionRepository>()
+    val camundaClient = mock<CamundaClient>()
+    val workerBuilder = mock<JobWorkerBuilderStep1>()
+    val workerBuilder2 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep2>()
+    val workerBuilder3 = mock<JobWorkerBuilderStep1.JobWorkerBuilderStep3>()
+    val jobWorker = mock<JobWorker>()
+    whenever(subscriptionRepository.getTaskSubscriptions()).thenReturn(listOf(subscription))
+    whenever(camundaClient.newWorker()).thenReturn(workerBuilder)
+    whenever(workerBuilder.jobType(TOPIC)).thenReturn(workerBuilder2)
+    whenever(workerBuilder2.handler(any())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.name(any())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.timeout(any<Long>())).thenReturn(workerBuilder3)
+    whenever(workerBuilder3.open()).thenReturn(jobWorker)
+    val delivery = SubscribingServiceTaskDelivery(
+      camundaClient = camundaClient,
+      subscriptionRepository = subscriptionRepository,
+      workerId = "test-worker",
+      retryTimeoutInSeconds = 10,
+      lockDurationInSeconds = 60
+    )
+
+    delivery.subscribe()
+    delivery.close()
+
+    verify(jobWorker).close()
+  }
 
   @Test
   fun `should match when all restrictions match`() {

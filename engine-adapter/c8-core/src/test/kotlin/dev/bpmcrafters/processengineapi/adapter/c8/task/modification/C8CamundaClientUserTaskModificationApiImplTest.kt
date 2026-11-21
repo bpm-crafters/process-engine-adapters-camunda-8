@@ -7,178 +7,97 @@ import io.camunda.client.CamundaClient
 import io.camunda.client.api.CamundaFuture
 import io.camunda.client.api.command.UpdateUserTaskCommandStep1
 import io.camunda.client.api.response.UpdateUserTaskResponse
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.time.OffsetDateTime
 
 class C8CamundaClientUserTaskModificationApiImplTest {
 
-  companion object {
-    private const val TASK_ID = "1234"
-  }
-
-  private val camundaClient: CamundaClient = mockk()
+  private val camundaClient: CamundaClient = mock()
   private val modificationApi = C8CamundaClientUserTaskModificationApiImpl(camundaClient)
 
   @Test
   fun `set candidate users updates the user task`() {
     val candidateUsers = listOf("user1", "user2")
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.candidateUsers(candidateUsers) } returns updateCommand
-    every { updateCommand.send() } returns future
-
-    modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateUsersTaskCmd(TASK_ID, candidateUsers))
-
-    verify {
-      updateCommand.candidateUsers(candidateUsers)
-      updateCommand.send()
+    update { command ->
+      whenever(command.candidateUsers(candidateUsers)).thenReturn(command)
+      modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateUsersTaskCmd(TASK_ID, candidateUsers))
+      verify(command).candidateUsers(candidateUsers)
     }
   }
 
   @Test
-  fun `clear candidate users updates the user task`() {
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.clearCandidateUsers() } returns updateCommand
-    every { updateCommand.send() } returns future
-
+  fun `clear candidate users updates the user task`() = update { command ->
+    whenever(command.clearCandidateUsers()).thenReturn(command)
     modificationApi.update(ChangeAssignmentModifyTaskCmd.ClearCandidateUsersTaskCmd(TASK_ID))
-
-    verify {
-      updateCommand.clearCandidateUsers()
-      updateCommand.send()
-    }
+    verify(command).clearCandidateUsers()
   }
 
   @Test
   fun `set candidate groups updates the user task`() {
     val candidateGroups = listOf("group1", "group2")
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.candidateGroups(candidateGroups) } returns updateCommand
-    every { updateCommand.send() } returns future
-
-    modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd(TASK_ID, candidateGroups))
-
-    verify {
-      updateCommand.candidateGroups(candidateGroups)
-      updateCommand.send()
+    update { command ->
+      whenever(command.candidateGroups(candidateGroups)).thenReturn(command)
+      modificationApi.update(ChangeAssignmentModifyTaskCmd.SetCandidateGroupsTaskCmd(TASK_ID, candidateGroups))
+      verify(command).candidateGroups(candidateGroups)
     }
   }
 
   @Test
-  fun `clear candidate groups updates the user task`() {
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.clearCandidateGroups() } returns updateCommand
-    every { updateCommand.send() } returns future
-
+  fun `clear candidate groups updates the user task`() = update { command ->
+    whenever(command.clearCandidateGroups()).thenReturn(command)
     modificationApi.update(ChangeAssignmentModifyTaskCmd.ClearCandidateGroupsTaskCmd(TASK_ID))
-
-    verify {
-      updateCommand.clearCandidateGroups()
-      updateCommand.send()
-    }
+    verify(command).clearCandidateGroups()
   }
 
   @Test
   fun `set due date updates the user task`() {
     val dueDate = OffsetDateTime.parse("2026-04-16T12:34:56+02:00")
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.dueDate(dueDate) } returns updateCommand
-    every { updateCommand.send() } returns future
-
-    modificationApi.update(ChangeDatesModifyTaskCmd.SetDueDateTaskCmd(TASK_ID, dueDate))
-
-    verify {
-      updateCommand.dueDate(dueDate)
-      updateCommand.send()
+    update { command ->
+      whenever(command.dueDate(dueDate)).thenReturn(command)
+      modificationApi.update(ChangeDatesModifyTaskCmd.SetDueDateTaskCmd(TASK_ID, dueDate))
+      verify(command).dueDate(dueDate)
     }
   }
 
   @Test
-  fun `clear due date updates the user task`() {
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.clearDueDate() } returns updateCommand
-    every { updateCommand.send() } returns future
-
+  fun `clear due date updates the user task`() = update { command ->
+    whenever(command.clearDueDate()).thenReturn(command)
     modificationApi.update(ChangeDatesModifyTaskCmd.ClearDueDateTaskCmd(TASK_ID))
-
-    verify {
-      updateCommand.clearDueDate()
-      updateCommand.send()
-    }
+    verify(command).clearDueDate()
   }
 
   @Test
   fun `set follow up date updates the user task`() {
     val followUpDate = OffsetDateTime.parse("2026-04-17T12:34:56+02:00")
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.followUpDate(followUpDate) } returns updateCommand
-    every { updateCommand.send() } returns future
-
-    modificationApi.update(ChangeDatesModifyTaskCmd.SetFollowUpDateTaskCmd(TASK_ID, followUpDate))
-
-    verify {
-      updateCommand.followUpDate(followUpDate)
-      updateCommand.send()
+    update { command ->
+      whenever(command.followUpDate(followUpDate)).thenReturn(command)
+      modificationApi.update(ChangeDatesModifyTaskCmd.SetFollowUpDateTaskCmd(TASK_ID, followUpDate))
+      verify(command).followUpDate(followUpDate)
     }
   }
 
   @Test
-  fun `clear follow up date updates the user task`() {
-    val updateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val future: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every { camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong()) } returns updateCommand
-    every { updateCommand.clearFollowUpDate() } returns updateCommand
-    every { updateCommand.send() } returns future
-
+  fun `clear follow up date updates the user task`() = update { command ->
+    whenever(command.clearFollowUpDate()).thenReturn(command)
     modificationApi.update(ChangeDatesModifyTaskCmd.ClearFollowUpDateTaskCmd(TASK_ID))
-
-    verify {
-      updateCommand.clearFollowUpDate()
-      updateCommand.send()
-    }
+    verify(command).clearFollowUpDate()
   }
 
   @Test
   fun `composite command executes nested date commands`() {
     val dueDate = OffsetDateTime.parse("2026-04-16T12:34:56+02:00")
     val followUpDate = OffsetDateTime.parse("2026-04-17T12:34:56+02:00")
-    val firstUpdateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val secondUpdateCommand: UpdateUserTaskCommandStep1 = mockk()
-    val firstFuture: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-    val secondFuture: CamundaFuture<UpdateUserTaskResponse> = mockk(relaxed = true)
-
-    every {
-      camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong())
-    } returnsMany listOf(firstUpdateCommand, secondUpdateCommand)
-    every { firstUpdateCommand.dueDate(dueDate) } returns firstUpdateCommand
-    every { firstUpdateCommand.send() } returns firstFuture
-    every { secondUpdateCommand.followUpDate(followUpDate) } returns secondUpdateCommand
-    every { secondUpdateCommand.send() } returns secondFuture
+    val firstCommand = command()
+    val secondCommand = command()
+    whenever(camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong())).thenReturn(firstCommand, secondCommand)
+    whenever(firstCommand.dueDate(dueDate)).thenReturn(firstCommand)
+    whenever(secondCommand.followUpDate(followUpDate)).thenReturn(secondCommand)
 
     modificationApi.update(
       CompositeModifyTaskCmd(
@@ -190,12 +109,10 @@ class C8CamundaClientUserTaskModificationApiImplTest {
       )
     )
 
-    verify {
-      firstUpdateCommand.dueDate(dueDate)
-      firstUpdateCommand.send()
-      secondUpdateCommand.followUpDate(followUpDate)
-      secondUpdateCommand.send()
-    }
+    verify(firstCommand).dueDate(dueDate)
+    verify(firstCommand).send()
+    verify(secondCommand).followUpDate(followUpDate)
+    verify(secondCommand).send()
   }
 
   @Test
@@ -204,6 +121,24 @@ class C8CamundaClientUserTaskModificationApiImplTest {
       modificationApi.update(ChangeAssignmentModifyTaskCmd.AddCandidateUserTaskCmd(TASK_ID, "demo"))
     }
 
-    verify(exactly = 0) { camundaClient.newUpdateUserTaskCommand(any()) }
+    verify(camundaClient, never()).newUpdateUserTaskCommand(any())
+  }
+
+  private fun update(assertions: (UpdateUserTaskCommandStep1) -> Unit) {
+    val command = command()
+    whenever(camundaClient.newUpdateUserTaskCommand(TASK_ID.toLong())).thenReturn(command)
+    assertions(command)
+    verify(command).send()
+  }
+
+  private fun command(): UpdateUserTaskCommandStep1 {
+    val command: UpdateUserTaskCommandStep1 = mock()
+    val future: CamundaFuture<UpdateUserTaskResponse> = mock()
+    whenever(command.send()).thenReturn(future)
+    return command
+  }
+
+  private companion object {
+    const val TASK_ID = "1234"
   }
 }
