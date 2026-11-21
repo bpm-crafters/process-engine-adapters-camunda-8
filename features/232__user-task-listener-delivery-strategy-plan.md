@@ -256,7 +256,7 @@ When `LISTENER` is active:
 - `C8SubscriptionAutoConfiguration` creates `GlobalUserTaskListenerRegistrationHelper`.
 - `C8SubscriptionAutoConfiguration` creates `UserTaskListenerDeliveryBinding` as bean
   `c8-user-task-delivery-subscription`.
-- `UserTaskListenerDeliveryBinding` reacts to `ApplicationStartedEvent`, registers the global listener when enabled, and
+- `UserTaskListenerDeliveryBinding` reacts to `ProcessApplicationRunningEvent`, registers the global listener when enabled, and
   when `preload-existing-tasks` is enabled calls `PullUserTaskDelivery.refresh()` once before subscribing to listener
   jobs.
 
@@ -292,7 +292,7 @@ dev:
               preload-existing-tasks: false
 ```
 
-Preload only sees subscriptions that already exist when the `ApplicationStartedEvent` listener runs. Tasks matching
+Preload only sees subscriptions that already exist when the `ProcessApplicationRunningEvent` listener runs. Tasks matching
 subscriptions created later are not discovered by this one-shot search; future task changes still arrive through listener
 events.
 

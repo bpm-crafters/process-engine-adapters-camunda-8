@@ -92,12 +92,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.mockk</groupId>
-      <artifactId>mockk-jvm</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-process-test-spring</artifactId>
       <scope>compile</scope>

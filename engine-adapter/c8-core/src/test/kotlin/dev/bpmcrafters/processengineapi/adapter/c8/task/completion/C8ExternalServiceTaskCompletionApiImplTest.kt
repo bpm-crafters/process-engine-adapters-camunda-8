@@ -14,10 +14,11 @@ import io.camunda.client.api.command.ThrowErrorCommandStep1.ThrowErrorCommandSte
 import io.camunda.client.api.response.CompleteJobResponse
 import io.camunda.client.api.response.FailJobResponse
 import io.camunda.client.api.response.ThrowErrorResponse
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import java.time.Duration
 
 
@@ -32,9 +33,9 @@ class C8ExternalServiceTaskCompletionApiImplTest {
     val PAYLOAD = mapOf("foo" to "bar")
   }
 
-  private val camundaClient: CamundaClient = mockk(relaxUnitFun = true)
-  private val subscriptionRepository: SubscriptionRepository = mockk(relaxed = true)
-  private val failureRetrySupplier: FailureRetrySupplier = mockk(relaxed = true)
+  private val camundaClient: CamundaClient = mock()
+  private val subscriptionRepository: SubscriptionRepository = mock()
+  private val failureRetrySupplier: FailureRetrySupplier = mock()
 
   private val taskCompletionApi = C8ExternalServiceTaskCompletionApiImpl(
     camundaClient,
@@ -45,13 +46,13 @@ class C8ExternalServiceTaskCompletionApiImplTest {
   @Test
   fun `complete task in Camunda`() {
     // GIVEN
-    val completeJobCommandStep1: CompleteJobCommandStep1 = mockk()
-    val zeebeFuture: CamundaFuture<CompleteJobResponse> = mockk(relaxed = true)
+    val completeJobCommandStep1: CompleteJobCommandStep1 = mock()
+    val zeebeFuture: CamundaFuture<CompleteJobResponse> = mock()
 
-    every { failureRetrySupplier.apply(any()) } returns FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF)
-    every { camundaClient.newCompleteCommand(TASK_ID.toLong()) } returns completeJobCommandStep1
-    every { completeJobCommandStep1.variables(PAYLOAD) } returns completeJobCommandStep1
-    every { completeJobCommandStep1.send() } returns zeebeFuture
+    whenever(failureRetrySupplier.apply(any())).thenReturn(FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF))
+    whenever(camundaClient.newCompleteCommand(TASK_ID.toLong())).thenReturn(completeJobCommandStep1)
+    whenever(completeJobCommandStep1.variables(PAYLOAD)).thenReturn(completeJobCommandStep1)
+    whenever(completeJobCommandStep1.send()).thenReturn(zeebeFuture)
 
     // WHEN
     taskCompletionApi.completeTask(
@@ -61,23 +62,23 @@ class C8ExternalServiceTaskCompletionApiImplTest {
       )
     )
 
-    verify { completeJobCommandStep1.variables(PAYLOAD) }
-    verify { completeJobCommandStep1.send() }
+    verify(completeJobCommandStep1).variables(PAYLOAD)
+    verify(completeJobCommandStep1).send()
   }
 
   @Test
   fun `fail task in Camunda`() {
     // GIVEN
-    val failJobCommandStep1: FailJobCommandStep1 = mockk()
-    val failJobCommandStep2: FailJobCommandStep2 = mockk()
-    val zeebeFuture: CamundaFuture<FailJobResponse> = mockk(relaxed = true)
+    val failJobCommandStep1: FailJobCommandStep1 = mock()
+    val failJobCommandStep2: FailJobCommandStep2 = mock()
+    val zeebeFuture: CamundaFuture<FailJobResponse> = mock()
 
-    every { failureRetrySupplier.apply(any()) } returns FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF)
-    every { camundaClient.newFailCommand(TASK_ID.toLong()) } returns failJobCommandStep1
-    every { failJobCommandStep1.retries(any()) } returns failJobCommandStep2
-    every { failJobCommandStep2.retryBackoff(any()) } returns failJobCommandStep2
-    every { failJobCommandStep2.errorMessage(any()) } returns failJobCommandStep2
-    every { failJobCommandStep2.send() } returns zeebeFuture
+    whenever(failureRetrySupplier.apply(any())).thenReturn(FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF))
+    whenever(camundaClient.newFailCommand(TASK_ID.toLong())).thenReturn(failJobCommandStep1)
+    whenever(failJobCommandStep1.retries(any())).thenReturn(failJobCommandStep2)
+    whenever(failJobCommandStep2.retryBackoff(any())).thenReturn(failJobCommandStep2)
+    whenever(failJobCommandStep2.errorMessage(any())).thenReturn(failJobCommandStep2)
+    whenever(failJobCommandStep2.send()).thenReturn(zeebeFuture)
 
     // WHEN
     taskCompletionApi.failTask(
@@ -89,25 +90,25 @@ class C8ExternalServiceTaskCompletionApiImplTest {
     )
 
     // THEN
-    verify { failJobCommandStep1.retries(RETRIES) }
-    verify { failJobCommandStep2.retryBackoff(Duration.ofSeconds(BACKOFF)) }
-    verify { failJobCommandStep2.errorMessage(REASON) }
-    verify { failJobCommandStep2.send() }
+    verify(failJobCommandStep1).retries(RETRIES)
+    verify(failJobCommandStep2).retryBackoff(Duration.ofSeconds(BACKOFF))
+    verify(failJobCommandStep2).errorMessage(REASON)
+    verify(failJobCommandStep2).send()
   }
 
   @Test
   fun `fail task takes retries from fail task command in Zeebe`() {
     // GIVEN
-    val failJobCommandStep1: FailJobCommandStep1 = mockk()
-    val failJobCommandStep2: FailJobCommandStep2 = mockk()
-    val zeebeFuture: CamundaFuture<FailJobResponse> = mockk(relaxed = true)
+    val failJobCommandStep1: FailJobCommandStep1 = mock()
+    val failJobCommandStep2: FailJobCommandStep2 = mock()
+    val zeebeFuture: CamundaFuture<FailJobResponse> = mock()
 
-    every { failureRetrySupplier.apply(any()) } returns FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF)
-    every { camundaClient.newFailCommand(TASK_ID.toLong()) } returns failJobCommandStep1
-    every { failJobCommandStep1.retries(any()) } returns failJobCommandStep2
-    every { failJobCommandStep2.retryBackoff(any()) } returns failJobCommandStep2
-    every { failJobCommandStep2.errorMessage(any()) } returns failJobCommandStep2
-    every { failJobCommandStep2.send() } returns zeebeFuture
+    whenever(failureRetrySupplier.apply(any())).thenReturn(FailureRetrySupplier.FailureRetry(RETRIES, BACKOFF))
+    whenever(camundaClient.newFailCommand(TASK_ID.toLong())).thenReturn(failJobCommandStep1)
+    whenever(failJobCommandStep1.retries(any())).thenReturn(failJobCommandStep2)
+    whenever(failJobCommandStep2.retryBackoff(any())).thenReturn(failJobCommandStep2)
+    whenever(failJobCommandStep2.errorMessage(any())).thenReturn(failJobCommandStep2)
+    whenever(failJobCommandStep2.send()).thenReturn(zeebeFuture)
 
     val retryCount = 3
     val retryBackoff = Duration.ofSeconds(10)
@@ -124,24 +125,24 @@ class C8ExternalServiceTaskCompletionApiImplTest {
     )
 
     // THEN
-    verify { failJobCommandStep1.retries(retryCount) }
-    verify { failJobCommandStep2.retryBackoff(retryBackoff) }
-    verify { failJobCommandStep2.errorMessage(REASON) }
-    verify { failJobCommandStep2.send() }
+    verify(failJobCommandStep1).retries(retryCount)
+    verify(failJobCommandStep2).retryBackoff(retryBackoff)
+    verify(failJobCommandStep2).errorMessage(REASON)
+    verify(failJobCommandStep2).send()
   }
 
   @Test
   fun `complete task by error in Camunda`() {
     // GIVEN
-    val throwErrorCommandStep1: ThrowErrorCommandStep1 = mockk()
-    val throwErrorCommandStep2: ThrowErrorCommandStep2 = mockk()
-    val zeebeFuture: CamundaFuture<ThrowErrorResponse> = mockk(relaxed = true)
+    val throwErrorCommandStep1: ThrowErrorCommandStep1 = mock()
+    val throwErrorCommandStep2: ThrowErrorCommandStep2 = mock()
+    val zeebeFuture: CamundaFuture<ThrowErrorResponse> = mock()
 
-    every { camundaClient.newThrowErrorCommand(TASK_ID.toLong()) } returns throwErrorCommandStep1
-    every { throwErrorCommandStep1.errorCode(any()) } returns throwErrorCommandStep2
-    every { throwErrorCommandStep2.errorMessage(any()) } returns throwErrorCommandStep2
-    every { throwErrorCommandStep2.variables(PAYLOAD) } returns throwErrorCommandStep2
-    every { throwErrorCommandStep2.send() } returns zeebeFuture
+    whenever(camundaClient.newThrowErrorCommand(TASK_ID.toLong())).thenReturn(throwErrorCommandStep1)
+    whenever(throwErrorCommandStep1.errorCode(any())).thenReturn(throwErrorCommandStep2)
+    whenever(throwErrorCommandStep2.errorMessage(any())).thenReturn(throwErrorCommandStep2)
+    whenever(throwErrorCommandStep2.variables(PAYLOAD)).thenReturn(throwErrorCommandStep2)
+    whenever(throwErrorCommandStep2.send()).thenReturn(zeebeFuture)
 
     // WHEN
     taskCompletionApi.completeTaskByError(
@@ -154,9 +155,9 @@ class C8ExternalServiceTaskCompletionApiImplTest {
     )
 
     // THEN
-    verify { throwErrorCommandStep1.errorCode(ERROR_CODE) }
-    verify { throwErrorCommandStep2.errorMessage(REASON) }
-    verify { throwErrorCommandStep2.variables(PAYLOAD) }
-    verify { throwErrorCommandStep2.send() }
+    verify(throwErrorCommandStep1).errorCode(ERROR_CODE)
+    verify(throwErrorCommandStep2).errorMessage(REASON)
+    verify(throwErrorCommandStep2).variables(PAYLOAD)
+    verify(throwErrorCommandStep2).send()
   }
 }

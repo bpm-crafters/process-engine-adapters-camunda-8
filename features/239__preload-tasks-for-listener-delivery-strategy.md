@@ -135,8 +135,8 @@ because the configured listener infrastructure may be absent.
 
 ## Subscription Timing
 
-Preload only sees subscriptions already present in `SubscriptionRepository` when the `ApplicationStartedEvent` listener
-runs. This matches the current listener startup model, where `ListenerUserTaskDelivery.subscribe()` computes the worker
+Preload only sees subscriptions already present in `SubscriptionRepository` when the `ProcessApplicationRunningEvent`
+listener runs. This matches the current listener startup model, where `ListenerUserTaskDelivery.subscribe()` computes the worker
 variable fetch projection from the subscriptions available at startup.
 
 Applications that create user task subscriptions after startup will still receive future listener events, but existing
