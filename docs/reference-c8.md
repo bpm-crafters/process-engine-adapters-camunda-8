@@ -8,6 +8,12 @@ The adapter delivers service tasks and user tasks through independent strategies
 Camunda API is used, which completion API is wired, how quickly task changes are visible, and which metadata is
 available in `TaskInformation.getMeta()`.
 
+## Process application lifecycle
+
+The Spring Boot starter integrates with the Process Engine API lifecycle. Initial task subscriptions are registered
+at `SUBSCRIPTION_REGISTRATION`. Built-in task delivery starts only after the lifecycle reaches `RUNNING`. On
+`STOPPING`, the adapter cancels scheduled delivery and closes its Camunda job workers before the application stops.
+
 ## Service Tasks
 
 | Strategy | Implementation | Impact |

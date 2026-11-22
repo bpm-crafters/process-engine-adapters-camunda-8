@@ -1,9 +1,12 @@
 package dev.bpmcrafters.example.common.adapter.in.process;
 
 import dev.bpmcrafters.processengineapi.CommonRestrictions;
+import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationStoppingEvent;
+import dev.bpmcrafters.processengineapi.springboot.lifecycle.TaskSubscriptionRegistrationEvent;
 import dev.bpmcrafters.processengineapi.task.*;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 
 import java.util.Map;
 
@@ -26,7 +29,8 @@ public abstract class AbstractSynchronousTaskHandler {
   }
 
   @SneakyThrows
-  public void register() {
+  @EventListener
+  public void register(TaskSubscriptionRegistrationEvent event) {
     log.info("[EXTERNAL TASK HANDLER] Registering handler for {}", topic);
     this.subscription = this.taskSubscriptionApi.subscribeForTask(
       new SubscribeForTaskCmd(
@@ -67,7 +71,8 @@ public abstract class AbstractSynchronousTaskHandler {
   }
 
   @SneakyThrows
-  public void unregister() {
+  @EventListener
+  public void unregister(ProcessApplicationStoppingEvent event) {
     log.info("[EXTERNAL TASK HANDLER] Un-registering handler for {}", topic);
     this.taskSubscriptionApi.unsubscribe(new UnsubscribeFromTaskCmd(subscription)).get();
   }

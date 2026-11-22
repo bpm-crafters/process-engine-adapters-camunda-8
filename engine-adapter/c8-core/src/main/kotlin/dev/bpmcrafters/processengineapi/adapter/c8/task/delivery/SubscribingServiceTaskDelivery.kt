@@ -8,6 +8,7 @@ import dev.bpmcrafters.processengineapi.task.TaskInformation
 import dev.bpmcrafters.processengineapi.task.TaskType
 import io.camunda.client.CamundaClient
 import io.camunda.client.api.response.ActivatedJob
+import io.camunda.client.api.worker.JobWorker
 import io.camunda.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
@@ -23,7 +24,9 @@ class SubscribingServiceTaskDelivery(
   private val workerId: String,
   private val retryTimeoutInSeconds: Long,
   private val lockDurationInSeconds: Long
-) {
+) : AutoCloseable {
+
+  private val jobWorkers = mutableListOf<JobWorker>()
 
   fun subscribe() {
     val subscriptions = subscriptionRepository.getTaskSubscriptions().filter { s -> s.taskType == TaskType.EXTERNAL }
@@ -33,7 +36,7 @@ class SubscribingServiceTaskDelivery(
         .filter { it.taskType == TaskType.EXTERNAL }
         .forEach { activeSubscription ->
           // this is a job to subscribe to.
-          camundaClient
+          val jobWorker = camundaClient
             .newWorker()
             .jobType(activeSubscription.taskDescriptionKey)
             .handler { _, job -> consumeActivatedJob(activeSubscription, job, camundaClient) }
@@ -41,10 +44,16 @@ class SubscribingServiceTaskDelivery(
             .forSubscription(activeSubscription)
             // FIXME -> metrics to setup
             .open()
+          jobWorkers += jobWorker
         }
     } else {
       logger.trace { "PROCESS-ENGINE-C8-050: Not subscribing service tasks for subscriptions. No subscriptions found." }
     }
+  }
+
+  override fun close() {
+    jobWorkers.forEach(JobWorker::close)
+    jobWorkers.clear()
   }
 
   private fun consumeActivatedJob(activeSubscription: TaskSubscriptionHandle, job: ActivatedJob, camundaClient: CamundaClient) {

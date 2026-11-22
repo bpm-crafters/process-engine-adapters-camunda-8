@@ -11,9 +11,9 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDel
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import io.camunda.client.CamundaClient
-import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import java.util.function.Supplier
@@ -28,7 +28,7 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
         C8SubscriptionAutoConfiguration::class.java
       )
     )
-    .withBean(CamundaClient::class.java, Supplier { mockk<CamundaClient>(relaxed = true) })
+    .withBean(CamundaClient::class.java, Supplier { mock<CamundaClient>() })
     .withPropertyValues(
       "$DEFAULT_PREFIX.enabled=true",
       "$DEFAULT_PREFIX.service-tasks.delivery-strategy=SUBSCRIPTION",
