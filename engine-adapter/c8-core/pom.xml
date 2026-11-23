@@ -165,12 +165,6 @@
       <artifactId>assertj-core</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>io.mockk</groupId>
-      <artifactId>mockk-jvm</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
   </dependencies>
 
   <build>

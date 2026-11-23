@@ -5,7 +5,7 @@
   <parent>
     <groupId>dev.bpm-crafters.maven.parent</groupId>
     <artifactId>maven-parent</artifactId>
-    <version>2026.08.1</version>
+    <version>2026.11.1</version>
     <relativePath/>
   </parent>
 
@@ -20,8 +20,9 @@
   <properties>
     <!-- COMMON GLOBAL -->
     <process-engine-api.version>1.7</process-engine-api.version>
+    <process-engine-api-lifecycle-spring-boot.version>2026.11.1</process-engine-api-lifecycle-spring-boot.version>
     <process-engine-api-testing.version>2026.10.1</process-engine-api-testing.version>
-    <jackson-module-kotlin.version>2.21.0</jackson-module-kotlin.version>
+    <jackson-module-kotlin.version>2.23.0</jackson-module-kotlin.version>
     <c8-core.jackson.version>2.21.4</c8-core.jackson.version>
     <c8-core.junit.version>6.0.3</c8-core.junit.version>
     <c8-core.mockito.version>5.23.0</c8-core.mockito.version>
@@ -50,7 +51,6 @@
     <junit5.version>5.13.3</junit5.version>
     <jgiven.version>2.0.2</jgiven.version>
     <awaitility.version>4.3.0</awaitility.version>
-    <mockk.version>1.14.11</mockk.version>
     <slf4j.verion>2.0.20</slf4j.verion>
     <testcontainers.version>2.0.5</testcontainers.version>
 
@@ -114,11 +114,6 @@
         <groupId>org.mockito.kotlin</groupId>
         <artifactId>mockito-kotlin</artifactId>
         <version>${mockito.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.mockk</groupId>
-        <artifactId>mockk-jvm</artifactId>
-        <version>${mockk.version}</version>
       </dependency>
       <dependency>
         <groupId>com.tngtech.archunit</groupId>

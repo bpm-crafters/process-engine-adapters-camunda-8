@@ -15,6 +15,7 @@ import dev.bpmcrafters.processengineapi.deploy.DeploymentApi
 import dev.bpmcrafters.processengineapi.impl.task.InMemSubscriptionRepository
 import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository
 import dev.bpmcrafters.processengineapi.process.StartProcessApi
+import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationLifecycleAutoConfiguration
 import dev.bpmcrafters.processengineapi.task.TaskSubscriptionApi
 import io.camunda.client.CamundaClient
 import io.camunda.client.spring.configuration.CamundaAutoConfiguration
@@ -26,7 +27,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Conditional
 
-@AutoConfiguration(after = [CamundaAutoConfiguration::class])
+@AutoConfiguration(
+  after = [CamundaAutoConfiguration::class],
+  before = [ProcessApplicationLifecycleAutoConfiguration::class]
+)
 @EnableConfigurationProperties(value = [C8AdapterProperties::class])
 @Conditional(C8AdapterEnabledCondition::class)
 class C8AdapterAutoConfiguration {

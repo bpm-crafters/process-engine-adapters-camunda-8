@@ -9,17 +9,17 @@ import io.camunda.client.api.response.EvaluateDecisionResponse
 import io.camunda.client.impl.CamundaObjectMapper
 import io.camunda.client.impl.response.EvaluateDecisionResponseImpl
 import io.camunda.zeebe.gateway.protocol.GatewayOuterClass
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.Base64
 import java.util.concurrent.CompletionException
 
 class EvaluateDecisionApiImplTest {
 
-  private val camundaClient: CamundaClient = mockk(relaxUnitFun = true)
+  private val camundaClient: CamundaClient = mock()
   private val api = EvaluateDecisionApiImpl(camundaClient)
 
   @Test
@@ -70,15 +70,15 @@ class EvaluateDecisionApiImplTest {
   }
 
   fun mockDecisionCommandVerifyAndReturn(expectedInputs: Map<String, Any>, expectedDecisionId: String, expectedResponseBase64ClassPath: String) {
-    val step1: EvaluateDecisionCommandStep1 = mockk()
-    val step2: EvaluateDecisionCommandStep1.EvaluateDecisionCommandStep2 = mockk()
-    val future: CamundaFuture<EvaluateDecisionResponse> = mockk()
+    val step1: EvaluateDecisionCommandStep1 = mock()
+    val step2: EvaluateDecisionCommandStep1.EvaluateDecisionCommandStep2 = mock()
+    val future: CamundaFuture<EvaluateDecisionResponse> = mock()
 
-    every { camundaClient.newEvaluateDecisionCommand() } returns step1
-    every { step1.decisionId(expectedDecisionId) } returns step2
-    every { step2.variables(expectedInputs) } returns step2
-    every { step2.send() } returns future
-    every { future.get() } returns
+    whenever(camundaClient.newEvaluateDecisionCommand()).thenReturn(step1)
+    whenever(step1.decisionId(expectedDecisionId)).thenReturn(step2)
+    whenever(step2.variables(expectedInputs)).thenReturn(step2)
+    whenever(step2.send()).thenReturn(future)
+    whenever(future.get()).thenReturn(
       run {
         val encodedResponse = requireNotNull(javaClass.classLoader.getResourceAsStream(expectedResponseBase64ClassPath)) {
           "Missing decision response fixture: $expectedResponseBase64ClassPath"
@@ -88,5 +88,6 @@ class EvaluateDecisionApiImplTest {
         )
         EvaluateDecisionResponseImpl(CamundaObjectMapper(), grpcResponse1)
       }
+    )
   }
 }
