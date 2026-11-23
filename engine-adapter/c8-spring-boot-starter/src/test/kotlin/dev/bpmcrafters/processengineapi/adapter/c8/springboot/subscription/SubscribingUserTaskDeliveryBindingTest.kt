@@ -1,8 +1,6 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
 
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationRunningEvent
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationStoppingEvent
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -15,14 +13,14 @@ class SubscribingUserTaskDeliveryBindingTest {
 
   @Test
   fun `subscribes when the lifecycle reaches running`() {
-    binding.start(mock<ProcessApplicationRunningEvent>())
+    binding.start()
 
     verify(delivery, times(1)).subscribe()
   }
 
   @Test
   fun `unsubscribes when the lifecycle reaches stopping`() {
-    binding.stop(mock<ProcessApplicationStoppingEvent>())
+    binding.stop()
 
     verify(delivery, times(1)).unsubscribeAll()
   }

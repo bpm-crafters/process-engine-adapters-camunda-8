@@ -6,6 +6,9 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterPropertie
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SCHEDULED
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.ConditionalOnUserTaskDeliveryStrategy
+import dev.bpmcrafters.processengineapi.adapter.c8.springboot.registerParticipant
+import dev.bpmcrafters.processengineapi.lifecycle.ProcessApplicationLifecycle
+import dev.bpmcrafters.processengineapi.lifecycle.ProcessApplicationPhase
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -48,34 +51,38 @@ class C8SchedulingAutoConfiguration {
   @Bean("c8-user-task-delivery-scheduler")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SCHEDULED)
   fun scheduledUserTaskDeliveryBinding(
+    lifecycle: ProcessApplicationLifecycle,
     c8AdapterProperties: C8AdapterProperties,
     @Qualifier("c8-task-scheduler")
     c8TaskScheduler: TaskScheduler,
     @Qualifier("c8-user-task-delivery")
     pullUserTaskDelivery: PullUserTaskDelivery
-  ): ScheduledUserTaskDeliveryBinding {
-    return ScheduledUserTaskDeliveryBinding(
+  ): ScheduledUserTaskDeliveryBinding = ScheduledUserTaskDeliveryBinding(
       pullUserTaskDelivery = pullUserTaskDelivery,
       c8AdapterProperties = c8AdapterProperties,
       c8taskScheduler = c8TaskScheduler
-    )
-  }
+    ).also { binding ->
+      lifecycle.registerParticipant(ProcessApplicationPhase.RUNNING) { binding.start() }
+      lifecycle.registerParticipant(ProcessApplicationPhase.STOPPING) { binding.stop() }
+    }
 
   @Bean("c8-user-task-delivery-scheduler")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
   fun refreshingUserTaskDeliveryBinding(
+    lifecycle: ProcessApplicationLifecycle,
     @Qualifier("c8-user-task-delivery")
     subscribingRefreshingZeebeJobUserTaskDelivery: SubscribingRefreshingZeebeJobUserTaskDelivery,
     c8AdapterProperties: C8AdapterProperties,
     @Qualifier("c8-task-scheduler")
     c8TaskScheduler: TaskScheduler
-  ): RefreshingUserTaskDeliveryBinding {
-    return RefreshingUserTaskDeliveryBinding(
+  ): RefreshingUserTaskDeliveryBinding = RefreshingUserTaskDeliveryBinding(
       subscribingRefreshingZeebeJobUserTaskDelivery = subscribingRefreshingZeebeJobUserTaskDelivery,
       c8AdapterProperties = c8AdapterProperties,
       c8taskScheduler = c8TaskScheduler
-    )
-  }
+    ).also { binding ->
+      lifecycle.registerParticipant(ProcessApplicationPhase.RUNNING) { binding.start() }
+      lifecycle.registerParticipant(ProcessApplicationPhase.STOPPING) { binding.stop() }
+    }
 
 
 }
