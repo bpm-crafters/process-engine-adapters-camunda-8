@@ -11,12 +11,12 @@ import jakarta.enterprise.inject.Produces
 import jakarta.inject.Singleton
 
 @Dependent
-class C8NativeUserTaskProducer {
+class C8ScheduledUserTaskDeliveryProducer {
 
   @Produces
   @Singleton
   @DefaultBean
-  fun delivery(client: CamundaClient, repository: SubscriptionRepository): PullUserTaskDelivery =
+  fun scheduledUserTaskDelivery(client: CamundaClient, repository: SubscriptionRepository): PullUserTaskDelivery =
     PullUserTaskDelivery(client, repository)
 
   @Produces

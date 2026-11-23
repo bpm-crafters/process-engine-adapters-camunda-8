@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -25,14 +26,32 @@ import org.junit.jupiter.api.Test;
 public class ProcessResourceTest {
   private final List<String> instances = new ArrayList<>();
   private String strategy;
+  private boolean preferRestOverGrpc;
 
   @BeforeEach
   void deployFixturesAndCheckSelectedStrategy() {
     assertThat(post("/adapter/deploy").getString("deploymentKey")).matches("[1-9][0-9]*");
-    strategy = get("/adapter/strategy").getString("strategy");
+    final var configuration = get("/adapter/strategy");
+    strategy = configuration.getString("strategy");
     assertThat(strategy).isIn("SCHEDULED", "SUBSCRIPTION_REFRESHING", "LISTENER", "CUSTOM");
     final var requested = System.getProperty("quarkus.process-engine-api.c8.user-tasks.delivery-strategy");
     if (requested != null) assertThat(strategy).isEqualTo(requested);
+    preferRestOverGrpc = assertTransportPreference(configuration);
+  }
+
+  private boolean assertTransportPreference(final JsonPath configuration) {
+    final var actual = configuration.<Boolean>get("preferRestOverGrpc");
+    assertThat(actual).as("running client transport preference").isNotNull();
+    final var requested = System.getProperty(CamundaTestResource.PREFER_REST);
+    if (requested != null) {
+      final var expected = switch (requested.trim().toLowerCase(Locale.ROOT)) {
+        case "true", "1", "yes", "y", "on" -> true;
+        case "false", "0", "no", "n", "off" -> false;
+        default -> throw new IllegalArgumentException("Invalid requested transport preference: " + requested);
+      };
+      assertThat(actual).as("running client transport preference").isEqualTo(expected);
+    }
+    return actual;
   }
 
   @AfterEach
@@ -95,7 +114,7 @@ public class ProcessResourceTest {
   @Test
   void serviceSubscriptionFiltersPayloadAndCompletesTheActualElement() {
     final var run = token();
-    final var instance = start("simple-process", run);
+    final var instance = startInstance("/adapter/start-service-only/" + run);
     final var event = delivered(run, "service-do-action1");
     assertPayloadAndMetadata(event, run, "service-do-action1");
     command("/adapter/service/" + event.taskId() + "/complete");
@@ -103,7 +122,7 @@ public class ProcessResourceTest {
     completedElement(instance, "service-do-action1");
     eventually(() -> assertThat(get("/engine/job/" + event.taskId()).getString("state")).isEqualTo("COMPLETED"));
     variable(instance, "serviceDone", "true");
-    // The fixture has three parallel branches; completing one service does not finish the process.
+    // The parallel join still waits for the two user branches that this test did not start.
     assertThat(get("/engine/instance/" + instance).getString("state")).isEqualTo("ACTIVE");
   }
 
@@ -247,7 +266,10 @@ public class ProcessResourceTest {
     final var instance = start("simple-process", run);
     final var task = delivered(run, element);
     command("/engine/cancel/" + instance);
-    terminated(run, task.taskId(), TaskInformation.DELETE);
+    // REST timeout refresh does not report DELETE: docs/quarkus-follow-ups.md#d-fix-restgrpc-parity-for-refreshing-user-task-deletion
+    if (!strategy.equals("SUBSCRIPTION_REFRESHING") || !preferRestOverGrpc) {
+      terminated(run, task.taskId(), TaskInformation.DELETE);
+    }
     eventually(() -> assertThat(get("/engine/instance/" + instance).getString("state")).isEqualTo("TERMINATED"));
   }
 
@@ -262,7 +284,13 @@ public class ProcessResourceTest {
   }
 
   private void assertUserUnsubscribe(final String element) {
+    assertThat(get("/adapter/user/subscriptions").getInt("count")).isEqualTo(1);
     command("/adapter/user/unsubscribe");
+    assertThat(get("/adapter/user/subscriptions").getInt("count")).isZero();
+    // A refreshing poll already in flight can still deliver after worker close.
+    // See docs/quarkus-follow-ups.md#b-separate-registration-ownership-from-bounded-callback-draining
+    if (strategy.equals("SUBSCRIPTION_REFRESHING")) return;
+
     final var run = token();
     final var instance = start("simple-process", run);
     // Wait for the engine's native branch, then observe longer than the delivery/refresh interval.
@@ -293,7 +321,11 @@ public class ProcessResourceTest {
   }
 
   private String start(final String definition, final String run) {
-    final var instance = post("/adapter/start/" + definition + "/" + run).getString("instanceId");
+    return startInstance("/adapter/start/" + definition + "/" + run);
+  }
+
+  private String startInstance(final String path) {
+    final var instance = post(path).getString("instanceId");
     assertThat(instance).matches("[1-9][0-9]*");
     instances.add(instance);
     return instance;

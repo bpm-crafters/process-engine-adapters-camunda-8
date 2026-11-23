@@ -11,12 +11,12 @@ import jakarta.enterprise.inject.Produces
 import jakarta.inject.Singleton
 
 @Dependent
-class C8RefreshingTaskProducer {
+class C8SubscribingRefreshingUserTaskDeliveryProducer {
 
   @Produces
   @Singleton
   @DefaultBean
-  fun delivery(
+  fun subscribingRefreshingUserTaskDelivery(
     client: CamundaClient,
     repository: SubscriptionRepository,
     config: C8AdapterRuntimeConfig

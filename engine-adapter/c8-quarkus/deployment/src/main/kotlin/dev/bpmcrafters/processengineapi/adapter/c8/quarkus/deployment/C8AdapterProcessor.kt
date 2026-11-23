@@ -4,10 +4,10 @@ import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8AdapterBuil
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8AdapterLifecycle
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8AdapterProducer
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8CamundaClientProducer
-import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8ListenerTaskProducer
-import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8NativeUserTaskProducer
-import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8RefreshingTaskProducer
+import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8ListenerUserTaskDeliveryProducer
+import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8ScheduledUserTaskDeliveryProducer
 import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8ServiceTaskProducer
+import dev.bpmcrafters.processengineapi.adapter.c8.quarkus.runtime.C8SubscribingRefreshingUserTaskDeliveryProducer
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem
 import io.quarkus.deployment.annotations.BuildStep
 import io.quarkus.deployment.builditem.FeatureBuildItem
@@ -27,10 +27,12 @@ class C8AdapterProcessor {
       beans.addBeanClass(C8ServiceTaskProducer::class.java)
     }
     when (config.userTasks().deliveryStrategy().orElseThrow()) {
-      C8AdapterBuildTimeConfig.UserStrategy.SCHEDULED -> beans.addBeanClass(C8NativeUserTaskProducer::class.java)
-      C8AdapterBuildTimeConfig.UserStrategy.SUBSCRIPTION_REFRESHING -> beans.addBeanClass(C8RefreshingTaskProducer::class.java)
+      C8AdapterBuildTimeConfig.UserStrategy.SCHEDULED ->
+        beans.addBeanClass(C8ScheduledUserTaskDeliveryProducer::class.java)
+      C8AdapterBuildTimeConfig.UserStrategy.SUBSCRIPTION_REFRESHING ->
+        beans.addBeanClass(C8SubscribingRefreshingUserTaskDeliveryProducer::class.java)
       C8AdapterBuildTimeConfig.UserStrategy.LISTENER ->
-        beans.addBeanClasses(C8NativeUserTaskProducer::class.java, C8ListenerTaskProducer::class.java)
+        beans.addBeanClasses(C8ScheduledUserTaskDeliveryProducer::class.java, C8ListenerUserTaskDeliveryProducer::class.java)
       C8AdapterBuildTimeConfig.UserStrategy.CUSTOM -> Unit // Application owns user task delivery and completion.
     }
     return beans.build()

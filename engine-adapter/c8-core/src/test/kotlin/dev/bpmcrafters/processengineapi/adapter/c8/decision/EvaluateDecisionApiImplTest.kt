@@ -13,8 +13,10 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.springframework.core.io.ClassPathResource
+import org.testcontainers.shaded.org.bouncycastle.util.encoders.Base64
+import java.io.ByteArrayInputStream
 import java.io.IOException
-import java.util.Base64
 import java.util.concurrent.CompletionException
 
 class EvaluateDecisionApiImplTest {
@@ -80,11 +82,12 @@ class EvaluateDecisionApiImplTest {
     whenever(step2.send()).thenReturn(future)
     whenever(future.get()).thenReturn(
       run {
-        val encodedResponse = requireNotNull(javaClass.classLoader.getResourceAsStream(expectedResponseBase64ClassPath)) {
-          "Missing decision response fixture: $expectedResponseBase64ClassPath"
-        }.bufferedReader(Charsets.UTF_8).use { it.readText() }
         val grpcResponse1 = GatewayOuterClass.EvaluateDecisionResponse.parseFrom(
-          Base64.getDecoder().decode(encodedResponse.filterNot { it.isWhitespace() })
+          ByteArrayInputStream(
+            Base64.decode(
+              ClassPathResource(expectedResponseBase64ClassPath).file.readText(Charsets.UTF_8)
+            )
+          )
         )
         EvaluateDecisionResponseImpl(CamundaObjectMapper(), grpcResponse1)
       }

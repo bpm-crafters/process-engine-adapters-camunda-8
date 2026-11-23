@@ -75,19 +75,20 @@ class C8AdapterProducerTest {
 
   @Test
   fun `refreshing uses service worker name and twice schedule in milliseconds`() {
-    val producer = C8RefreshingTaskProducer()
+    val producer = C8SubscribingRefreshingUserTaskDeliveryProducer()
     val config = ConfigTestData.enabled("CUSTOM", "SUBSCRIPTION_REFRESHING", mapOf(
       "service-tasks.worker-id" to "service-worker", "user-tasks.schedule-delivery-fixed-rate-in-seconds" to "7"
     )).runtime
-    assertThat(producer.delivery(client, repository, config)).extracting("workerId", "userTaskLockTimeoutMs")
+    assertThat(producer.subscribingRefreshingUserTaskDelivery(client, repository, config))
+      .extracting("workerId", "userTaskLockTimeoutMs")
       .containsExactly("service-worker", 14000L)
     assertThat(producer.completion(client, repository)).isExactlyInstanceOf(C8CamundaClientUserTaskJobCompletionApiImpl::class.java)
   }
 
   @Test
   fun `native user delivery and completion use shared client and repository`() {
-    val producer = C8NativeUserTaskProducer()
-    assertThat(producer.delivery(client, repository)).extracting("camundaClient", "subscriptionRepository")
+    val producer = C8ScheduledUserTaskDeliveryProducer()
+    assertThat(producer.scheduledUserTaskDelivery(client, repository)).extracting("camundaClient", "subscriptionRepository")
       .containsExactly(client, repository)
     assertThat(producer.completion(client, repository)).isExactlyInstanceOf(C8CamundaClientUserTaskCompletionApiImpl::class.java)
   }
@@ -99,8 +100,8 @@ class C8AdapterProducerTest {
       "user-tasks.listener.max-jobs-active" to "17", "user-tasks.listener.stream-enabled" to "false",
       "user-tasks.listener.lock-time-in-seconds" to "41", "user-tasks.listener.retry-timeout-in-seconds" to "19"
     )).runtime
-    val producer = C8ListenerTaskProducer()
-    assertThat(producer.delivery(client, repository, config))
+    val producer = C8ListenerUserTaskDeliveryProducer()
+    assertThat(producer.listenerUserTaskDelivery(client, repository, config))
       .extracting("topic", "workerId", "maxJobsActive", "streamEnabled", "lockTimeInSeconds", "retryTimeoutInSeconds")
       .containsExactly("topic", "listener-worker", 17, false, 41L, 19L)
     assertThat(producer.registration(client, config)).extracting(

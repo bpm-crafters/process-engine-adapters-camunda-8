@@ -2,6 +2,7 @@ package dev.bpmcrafters.processengineapi.adapter.c8.quarkus.it;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import org.testcontainers.containers.GenericContainer;
@@ -10,6 +11,8 @@ import org.testcontainers.utility.DockerImageName;
 
 public class CamundaTestResource implements QuarkusTestResourceLifecycleManager {
 
+  static final String PREFER_REST = "quarkus.process-engine-api.c8.client.prefer-rest-over-grpc";
+
   private GenericContainer<?> camunda;
 
   @Override
@@ -17,12 +20,20 @@ public class CamundaTestResource implements QuarkusTestResourceLifecycleManager 
     camunda = createContainer();
     try {
       camunda.start();
-      return Map.of(
-          "quarkus.process-engine-api.c8.client.grpc-address", address(26500),
-          "quarkus.process-engine-api.c8.client.rest-address", address(8080));
+      return clientProperties();
     } catch (final RuntimeException failure) {
       throw startupFailure(failure);
     }
+  }
+
+  private Map<String, String> clientProperties() {
+    final var properties = new HashMap<>(Map.of(
+        "quarkus.process-engine-api.c8.client.grpc-address", address(26500),
+        "quarkus.process-engine-api.c8.client.rest-address", address(8080)));
+    final var requested = System.getProperty(PREFER_REST);
+    // Forward an explicit test JVM setting to the separately launched packaged application too.
+    if (requested != null) properties.put(PREFER_REST, requested);
+    return Map.copyOf(properties);
   }
 
   private IllegalStateException startupFailure(final RuntimeException failure) {

@@ -85,7 +85,7 @@ class C8AdapterLifecycle @Inject constructor(
       C8AdapterBuildTimeConfig.UserStrategy.SCHEDULED -> schedule(pulls.get()::refresh)
       C8AdapterBuildTimeConfig.UserStrategy.SUBSCRIPTION_REFRESHING -> {
         val delivery = refreshing.get()
-        cleanup.add(AutoCloseable { delivery.close() })
+        cleanup.add(AutoCloseable { delivery.unsubscribeAll() })
         delivery.subscribe()
         schedule(delivery::refresh)
       }
@@ -139,7 +139,7 @@ class C8AdapterLifecycle @Inject constructor(
         cleanup.clear()
       }
     }
-    // A draining handler may reenter stop(); never hold the lifecycle lock while waiting for it.
+    // Cleanup can wait for a running scheduled iteration; do not hold the lifecycle lock.
     try {
       closeAll(actions)
     } finally {

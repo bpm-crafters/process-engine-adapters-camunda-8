@@ -13,6 +13,10 @@ java -Dquarkus.profile=run -jar examples/java-c8-quarkus/target/quarkus-app/quar
 
 Open [Swagger UI](http://localhost:18083/q/swagger-ui) or use [simple-process-demo.http](simple-process-demo.http). OpenAPI is available at `/q/openapi`.
 
+The local Compose stack independently pins Camunda server 8.10.7. Automated example tests use
+Testcontainers instead of Compose and select the server through `camunda.test.version`, which
+defaults to the root `camunda.version`. The tests verified SDK and server 8.10.10 together.
+
 The Compose stack is **local-only**: APIs are unauthenticated, UI credentials are `demo` / `demo`, and database credentials are `camunda` / `camunda`. Only loopback ports `8088` and `26500` are exposed. PostgreSQL has no host port. Do not use this configuration in production. Access [Operate](http://localhost:8088/operate), [Tasklist](http://localhost:8088/tasklist), and [Admin](http://localhost:8088/admin). Stop the disposable stack with:
 
 ```shell

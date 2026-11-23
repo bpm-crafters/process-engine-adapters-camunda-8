@@ -6,6 +6,8 @@ import dev.bpmcrafters.processengineapi.deploy.*;
 import dev.bpmcrafters.processengineapi.process.*;
 import dev.bpmcrafters.processengineapi.task.*;
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery;
+import dev.bpmcrafters.processengineapi.impl.task.SubscriptionRepository;
+import io.camunda.client.CamundaClient;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -31,10 +33,13 @@ public class ProcessResource {
   @Inject UserTaskModificationApi modifications;
   @Inject TaskHistory history;
   @Inject Instance<PullUserTaskDelivery> customDelivery;
+  @Inject CamundaClient client;
+  @Inject SubscriptionRepository subscriptionRepository;
 
   @GET @Path("/strategy")
-  public Map<String, String> strategy() {
-    return Map.of("strategy", TaskHistory.strategy());
+  public Map<String, Object> strategy() {
+    return Map.of("strategy", TaskHistory.strategy(),
+        "preferRestOverGrpc", client.getConfiguration().preferRestOverGrpc());
   }
 
   @POST @Path("/deploy")
@@ -55,6 +60,13 @@ public class ProcessResource {
   public Map<String, String> start(@PathParam("definition") final String definition,
       @PathParam("runId") final String runId) {
     final var result = processes.startProcess(new StartProcessByDefinitionCmd(definition, payload(runId), Map.of())).join();
+    return Map.of("instanceId", result.getInstanceId());
+  }
+
+  @POST @Path("/start-service-only/{runId}")
+  public Map<String, String> startServiceOnly(@PathParam("runId") final String runId) {
+    final var result = processes.startProcess(new StartProcessByDefinitionAtElementCmd(
+        "simple-process", "service-do-action1", payload(runId), Map.of())).join();
     return Map.of("instanceId", result.getInstanceId());
   }
 
@@ -141,6 +153,13 @@ public class ProcessResource {
   @POST @Path("/user/unsubscribe")
   public void unsubscribe() {
     history.unsubscribeUser();
+  }
+
+  @GET @Path("/user/subscriptions")
+  public Map<String, Long> userSubscriptions() {
+    final var count = subscriptionRepository.getTaskSubscriptions().stream()
+        .filter(subscription -> subscription.getTaskType() == TaskType.USER).count();
+    return Map.of("count", count);
   }
 
   @RegisterForReflection

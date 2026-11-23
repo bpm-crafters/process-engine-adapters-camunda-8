@@ -1,15 +1,24 @@
 # Quarkus adapter
 
-Use this extension to inject the Process Engine API into a Quarkus application.
+Use this extension to inject the Process Engine API into a JVM Quarkus application. The extension
+uses the framework-independent core adapter and the official Camunda Java Client.
 
 ## Install
 
-Import the Quarkus platform BOM and adapter BOM in your application's `pom.xml`
+The Quarkus artifacts are not yet released. From this repository's root, install the adapter BOM,
+runtime, and deployment artifacts into your local Maven repository:
+
+```sh
+./mvnw -pl bom,engine-adapter/c8-quarkus/runtime,engine-adapter/c8-quarkus/deployment -am install -DskipTests
+```
+
+Import the Quarkus platform BOM and adapter BOM in your application's `pom.xml`. Set the adapter
+version to the version from this checkout's root `pom.xml`, not the Camunda SDK version:
 
 ```xml
 <properties>
   <quarkus.platform.version>3.40.1.1</quarkus.platform.version>
-  <process-engine-adapter-camunda-platform-c8.version>${camunda.sdk.version}</process-engine-adapter-camunda-platform-c8.version>
+  <process-engine-adapter-camunda-platform-c8.version>2026.09.2-SNAPSHOT</process-engine-adapter-camunda-platform-c8.version>
 </properties>
 
 <dependencyManagement>
@@ -142,12 +151,18 @@ Injection does not mean that every command variant works for every task type.
 | User-task strategy | Behavior |
 | --- | --- |
 | `SCHEDULED` | Poll and deliver native Camunda user tasks; supply native user-task completion |
-| `SUBSCRIPTION_REFRESHING` | Deliver legacy job-based user tasks and refresh delivery state; supply job completion |
+| `SUBSCRIPTION_REFRESHING` | Deliver legacy job-based user tasks and refresh delivery state; supply job completion. REST cancellation does not emit a `DELETE` callback. |
 | `LISTENER` | Deliver native user tasks through user-task listener jobs; supply native user-task completion |
 | `CUSTOM` | Supply neither built-in user-task delivery nor user-task completion; provide application beans |
 
 `SUBSCRIPTION_REFRESHING` uses the service-task worker ID and a worker lock timeout equal to twice
-the schedule interval, converted to milliseconds.
+the schedule interval, converted to milliseconds. With the default REST preference, Camunda
+still terminates the process, but the core does not translate the subsequent timeout-refresh
+HTTP 404 into a `DELETE` callback. The uncaught 404 also aborts that refresh pass, potentially
+preventing lock renewal for later tasks. This can recur because the cancelled job stays tracked.
+See the [REST/gRPC follow-up](quarkus-follow-ups.md#d-fix-restgrpc-parity-for-refreshing-user-task-deletion).
+Unsubscribing removes the registration and closes its worker, but a poll already in flight can
+still deliver a task after unsubscribe returns.
 
 In `LISTENER` mode, configure BPMN listeners to use the listener topic or enable global listener registration.
 Global user-task listeners, including static global configuration and REST registration, require
@@ -235,3 +250,6 @@ class ApplicationClient {
   fun close(@Disposes client: CamundaClient) = client.close()
 }
 ```
+
+See the [follow-up plan](quarkus-follow-ups.md) for lifecycle, core-adapter, and compatibility work
+that this extension does not introduce.

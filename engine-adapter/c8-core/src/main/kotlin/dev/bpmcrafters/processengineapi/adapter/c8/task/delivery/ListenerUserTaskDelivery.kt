@@ -21,7 +21,7 @@ private val logger = KotlinLogging.logger {}
 /**
  * Delivery based on a user task listener.
  */
-class ListenerUserTaskDelivery @JvmOverloads constructor(
+class ListenerUserTaskDelivery(
   private val camundaClient: CamundaClient,
   private val subscriptionRepository: SubscriptionRepository,
   private val topic: String = DEFAULT_TOPIC,
@@ -29,8 +29,7 @@ class ListenerUserTaskDelivery @JvmOverloads constructor(
   private val maxJobsActive: Int = DEFAULT_MAX_JOBS_ACTIVE,
   private val streamEnabled: Boolean = true,
   private val lockTimeInSeconds: Long = DEFAULT_LOCK_TIME_IN_SECONDS,
-  private val retryTimeoutInSeconds: Long = DEFAULT_RETRY_TIMEOUT_IN_SECONDS,
-  private val shutdownTimeout: Duration = Duration.ofSeconds(30)
+  private val retryTimeoutInSeconds: Long = DEFAULT_RETRY_TIMEOUT_IN_SECONDS
 ) : SubscribingUserTaskDelivery, AutoCloseable {
 
   companion object {
@@ -41,45 +40,23 @@ class ListenerUserTaskDelivery @JvmOverloads constructor(
     const val DEFAULT_RETRY_TIMEOUT_IN_SECONDS = 5L
   }
 
-  private val lifecycle = UserTaskWorkerLifecycle(shutdownTimeout)
-  private var registration: UserTaskWorkerLifecycle.Registration? = null
+  private var listenerJobWorker: UserTaskListenerJobWorker? = null
 
   fun subscribe() {
-    val (previous, current) = synchronized(lifecycle.monitor) {
-      lifecycle.checkSubscriptionAllowed()
-      val previous = registration
-      val current = lifecycle.register()
-      registration = current
-      previous to current
-    }
-    try {
-      previous?.let { lifecycle.cancel(listOf(it)) }
-      lifecycle.open(current) {
-        val listener = UserTaskListenerJobWorker(
-          camundaClient = camundaClient,
-          topic = topic,
-          workerId = workerId,
-          maxJobsActive = maxJobsActive,
-          streamEnabled = streamEnabled,
-          lockTimeInSeconds = lockTimeInSeconds,
-          fetchVariables = fetchVariablesForSubscriptions(),
-          handler = { job -> lifecycle.deliver(current) { accepting -> if (accepting) consumeActivatedJob(job) } }
-        )
-        logger.trace { "PROCESS-ENGINE-C8-060: subscribing user task listener jobs for topic $topic." }
-        val worker = listener.openWorker()
-        logger.trace { "PROCESS-ENGINE-C8-061: subscribed user task listener jobs for topic $topic." }
-        worker
-      }
-    } catch (error: Throwable) {
-      synchronized(lifecycle.monitor) { if (registration === current) registration = null }
-      try {
-        lifecycle.cancel(listOf(current))
-      } catch (cleanupError: Throwable) {
-        if (cleanupError !== error) error.addSuppressed(cleanupError)
-      }
-      throw error
-    } finally {
-      lifecycle.settle(current)
+    listenerJobWorker?.close()
+    listenerJobWorker = UserTaskListenerJobWorker(
+      camundaClient = camundaClient,
+      topic = topic,
+      workerId = workerId,
+      maxJobsActive = maxJobsActive,
+      streamEnabled = streamEnabled,
+      lockTimeInSeconds = lockTimeInSeconds,
+      fetchVariables = fetchVariablesForSubscriptions(),
+      handler = this::consumeActivatedJob
+    ).also {
+      logger.trace { "PROCESS-ENGINE-C8-060: subscribing user task listener jobs for topic $topic." }
+      it.open()
+      logger.trace { "PROCESS-ENGINE-C8-061: subscribed user task listener jobs for topic $topic." }
     }
   }
 
@@ -90,17 +67,9 @@ class ListenerUserTaskDelivery @JvmOverloads constructor(
       .forEach { taskId -> subscriptionRepository.deactivateSubscriptionForTask(taskId) }
   }
 
-  /**
-   * Stops acquisition and drains whole callbacks/openings within shutdownTimeout (default 30 seconds).
-   * Queued callbacks are ignored without SDK commands. Timeout, interruption and self/concurrent drain
-   * report failure; incomplete work remains tracked for retry. Does not own the client.
-   */
   override fun close() {
-    try {
-      lifecycle.close()
-    } finally {
-      synchronized(lifecycle.monitor) { if (registration?.accepting == false) registration = null }
-    }
+    listenerJobWorker?.close()
+    listenerJobWorker = null
   }
 
   internal fun consumeActivatedJob(job: ActivatedJob) {
@@ -248,12 +217,8 @@ class ListenerUserTaskDelivery @JvmOverloads constructor(
     private var jobWorker: JobWorker? = null
 
     fun open() {
-      openWorker()
-    }
-
-    internal fun openWorker(): JobWorker {
       if (jobWorker?.isOpen == true) {
-        return requireNotNull(jobWorker)
+        return
       }
 
       jobWorker = camundaClient
@@ -270,7 +235,6 @@ class ListenerUserTaskDelivery @JvmOverloads constructor(
           }
         }
         .open()
-      return requireNotNull(jobWorker)
     }
 
     override fun close() {

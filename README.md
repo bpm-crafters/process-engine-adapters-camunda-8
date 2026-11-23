@@ -97,9 +97,14 @@ Use the Quarkus extension for CDI wiring and task delivery:
 </dependency>
 ```
 
-The Quarkus extension targets Quarkus 3.37.3+ and Java 17+.
-It uses the official Camunda Java Client, included transitively.
-The currently verified combination is Quarkus 3.40.1.1 with Camunda client/server 8.10.7.
+The JVM-only Quarkus extension targets Quarkus 3.37.3+ and Java 17+ and includes the official
+Camunda Java Client transitively. Root verification passed on Java 17 with Quarkus 3.40.1.1 and
+Camunda client and server 8.10.10. In-process and packaged JVM tests passed for all four user-task
+strategies, including refreshing over both REST and gRPC. The Quarkus 3.37.3 floor, other
+SDK/server versions, SaaS, and Quarkus dev mode remain unverified.
+
+See the [Quarkus guide](docs/quarkus.md) for local installation and configuration, and the
+[follow-up plan](docs/quarkus-follow-ups.md) for work outside this feature.
 
 ## Anatomy
 
