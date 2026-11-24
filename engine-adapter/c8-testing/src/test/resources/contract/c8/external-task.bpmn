@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" targetNamespace="c8-contract" exporter="Camunda Modeler" exporterVersion="5.46.1">
+  <bpmn:error id="contractBusinessError" errorCode="CONTRACT_BUSINESS_ERROR" />
   <bpmn:process id="contract-external-task" isExecutable="true">
     <bpmn:startEvent id="start" name="Start process">
       <bpmn:outgoing>toWork</bpmn:outgoing>
@@ -11,11 +12,19 @@
       <bpmn:incoming>toWork</bpmn:incoming>
       <bpmn:outgoing>toEnd</bpmn:outgoing>
     </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="workerError" attachedToRef="work">
+      <bpmn:outgoing>toErrorEnd</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="contractBusinessError" />
+    </bpmn:boundaryEvent>
     <bpmn:endEvent id="end" name="Work completed">
       <bpmn:incoming>toEnd</bpmn:incoming>
     </bpmn:endEvent>
+    <bpmn:endEvent id="errorEnd" name="Business error handled">
+      <bpmn:incoming>toErrorEnd</bpmn:incoming>
+    </bpmn:endEvent>
     <bpmn:sequenceFlow id="toWork" sourceRef="start" targetRef="work" />
     <bpmn:sequenceFlow id="toEnd" sourceRef="work" targetRef="end" />
+    <bpmn:sequenceFlow id="toErrorEnd" sourceRef="workerError" targetRef="errorEnd" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="Diagram_contract-external-task">
     <bpmndi:BPMNPlane id="Plane_contract-external-task" bpmnElement="contract-external-task">
@@ -27,6 +36,12 @@
         <bpmndi:BPMNLabel>
           <dc:Bounds x="450" y="154" width="80" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_workerError" bpmnElement="workerError">
+        <dc:Bounds x="374" y="158" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_errorEnd" bpmnElement="errorEnd">
+        <dc:Bounds x="472" y="230" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Shape_start" bpmnElement="start">
         <dc:Bounds x="172" y="118" width="36" height="36" />
@@ -47,6 +62,11 @@
         <bpmndi:BPMNLabel>
           <dc:Bounds x="620" y="114" width="120" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_toErrorEnd" bpmnElement="toErrorEnd">
+        <di:waypoint x="392" y="194" />
+        <di:waypoint x="392" y="248" />
+        <di:waypoint x="472" y="248" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
