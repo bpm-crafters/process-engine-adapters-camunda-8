@@ -4,8 +4,6 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterPropertie
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationRunningEvent
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationStoppingEvent
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.inOrder
@@ -20,12 +18,10 @@ class UserTaskListenerDeliveryBindingTest {
   private val listenerUserTaskDelivery: ListenerUserTaskDelivery = mock()
   private val listenerPreloadUserTaskDelivery: PullUserTaskDelivery = mock()
   private val globalUserTaskListenerRegistrationHelper: GlobalUserTaskListenerRegistrationHelper = mock()
-  private val runningEvent: ProcessApplicationRunningEvent = mock()
-  private val stoppingEvent: ProcessApplicationStoppingEvent = mock()
 
   @Test
   fun `should register preload and subscribe in order when preload is enabled`() {
-    binding(preloadExistingTasks = true).start(runningEvent)
+    binding(preloadExistingTasks = true).start()
 
     inOrder(
       globalUserTaskListenerRegistrationHelper,
@@ -40,7 +36,7 @@ class UserTaskListenerDeliveryBindingTest {
 
   @Test
   fun `should skip preload when preload is disabled`() {
-    binding(preloadExistingTasks = false).start(runningEvent)
+    binding(preloadExistingTasks = false).start()
 
     inOrder(globalUserTaskListenerRegistrationHelper, listenerUserTaskDelivery).apply {
       verify(globalUserTaskListenerRegistrationHelper).registerIfEnabled()
@@ -53,7 +49,7 @@ class UserTaskListenerDeliveryBindingTest {
   fun `should subscribe when preload throws`() {
     whenever(listenerPreloadUserTaskDelivery.refresh()).thenThrow(RuntimeException("boom"))
 
-    binding(preloadExistingTasks = true).start(runningEvent)
+    binding(preloadExistingTasks = true).start()
 
     inOrder(
       globalUserTaskListenerRegistrationHelper,
@@ -71,7 +67,7 @@ class UserTaskListenerDeliveryBindingTest {
     whenever(globalUserTaskListenerRegistrationHelper.registerIfEnabled()).thenThrow(IllegalStateException("registration failed"))
 
     assertThatThrownBy {
-      binding(preloadExistingTasks = true).start(runningEvent)
+      binding(preloadExistingTasks = true).start()
     }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessage("registration failed")
@@ -82,7 +78,7 @@ class UserTaskListenerDeliveryBindingTest {
 
   @Test
   fun `should close listener worker when stopping`() {
-    binding(preloadExistingTasks = true).stop(stoppingEvent)
+    binding(preloadExistingTasks = true).stop()
 
     verify(listenerUserTaskDelivery, times(1)).close()
   }

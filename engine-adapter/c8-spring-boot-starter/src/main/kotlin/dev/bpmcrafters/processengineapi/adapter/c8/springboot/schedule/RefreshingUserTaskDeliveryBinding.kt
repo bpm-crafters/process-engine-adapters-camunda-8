@@ -2,11 +2,8 @@ package dev.bpmcrafters.processengineapi.adapter.c8.springboot.schedule
 
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationRunningEvent
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationStoppingEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.event.EventListener
 import org.springframework.scheduling.TaskScheduler
 import java.time.Duration
 import java.time.Instant
@@ -24,9 +21,8 @@ class RefreshingUserTaskDeliveryBinding(
 
   private var scheduledDelivery: ScheduledFuture<*>? = null
 
-  @EventListener
   @Synchronized
-  fun start(event: ProcessApplicationRunningEvent) {
+  fun start() {
     if (scheduledDelivery != null) {
       return
     }
@@ -39,9 +35,8 @@ class RefreshingUserTaskDeliveryBinding(
     )
   }
 
-  @EventListener
   @Synchronized
-  fun stop(event: ProcessApplicationStoppingEvent) {
+  fun stop() {
     scheduledDelivery?.cancel(false)
     scheduledDelivery = null
   }

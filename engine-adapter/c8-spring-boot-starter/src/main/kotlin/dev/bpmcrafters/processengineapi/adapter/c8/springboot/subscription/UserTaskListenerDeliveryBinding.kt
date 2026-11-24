@@ -4,10 +4,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterPropertie
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.GlobalUserTaskListenerRegistrationHelper
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationRunningEvent
-import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationStoppingEvent
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.context.event.EventListener
 
 private val logger = KotlinLogging.logger {}
 
@@ -18,8 +15,7 @@ open class UserTaskListenerDeliveryBinding(
   private val c8AdapterProperties: C8AdapterProperties,
 ) {
 
-  @EventListener
-  open fun start(event: ProcessApplicationRunningEvent) {
+  open fun start() {
     logger.trace { "PROCESS-ENGINE-C8-111: Registering global user task listener if enabled..." }
     globalUserTaskListenerRegistrationHelper.registerIfEnabled()
     logger.trace { "PROCESS-ENGINE-C8-112: Global user task listener registration checked." }
@@ -37,8 +33,7 @@ open class UserTaskListenerDeliveryBinding(
     logger.trace { "PROCESS-ENGINE-C8-105: Subscribed to user task listener jobs." }
   }
 
-  @EventListener
-  open fun stop(event: ProcessApplicationStoppingEvent) {
+  open fun stop() {
     listenerUserTaskDelivery.close()
   }
 }
