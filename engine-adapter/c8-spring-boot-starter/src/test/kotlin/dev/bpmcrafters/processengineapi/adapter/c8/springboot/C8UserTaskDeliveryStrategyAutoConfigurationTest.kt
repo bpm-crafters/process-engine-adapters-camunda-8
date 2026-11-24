@@ -10,6 +10,7 @@ import dev.bpmcrafters.processengineapi.adapter.c8.task.completion.C8CamundaClie
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.PullUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.SubscribingRefreshingZeebeJobUserTaskDelivery
 import dev.bpmcrafters.processengineapi.adapter.c8.task.delivery.ListenerUserTaskDelivery
+import dev.bpmcrafters.processengineapi.springboot.lifecycle.ProcessApplicationLifecycleAutoConfiguration
 import io.camunda.client.CamundaClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -25,7 +26,8 @@ class C8UserTaskDeliveryStrategyAutoConfigurationTest {
       AutoConfigurations.of(
         C8AdapterAutoConfiguration::class.java,
         C8CamundaClientAutoConfiguration::class.java,
-        C8SubscriptionAutoConfiguration::class.java
+        C8SubscriptionAutoConfiguration::class.java,
+        ProcessApplicationLifecycleAutoConfiguration::class.java
       )
     )
     .withBean(CamundaClient::class.java, Supplier { mock<CamundaClient>() })
