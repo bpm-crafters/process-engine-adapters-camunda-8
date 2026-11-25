@@ -175,7 +175,7 @@
         <artifactId>kotlin-maven-plugin</artifactId>
         <groupId>org.jetbrains.kotlin</groupId>
         <configuration>
-          <jvmTarget>17</jvmTarget>
+          <jvmTarget>21</jvmTarget>
           <compilerPlugins>
             <plugin>spring</plugin>
             <plugin>no-arg</plugin>

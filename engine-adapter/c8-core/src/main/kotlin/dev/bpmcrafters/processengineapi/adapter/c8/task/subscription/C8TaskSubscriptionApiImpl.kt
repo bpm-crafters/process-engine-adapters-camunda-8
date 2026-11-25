@@ -17,6 +17,16 @@ class C8TaskSubscriptionApiImpl(
   subscriptionRepository = subscriptionRepository
 ) {
 
+  private companion object {
+    // The common subset of the C8 external-task and user-task delivery strategies.
+    val SUPPORTED_RESTRICTIONS = setOf(
+      CommonRestrictions.TENANT_ID,
+      CommonRestrictions.PROCESS_INSTANCE_ID,
+      CommonRestrictions.PROCESS_DEFINITION_ID,
+      CommonRestrictions.PROCESS_DEFINITION_KEY
+    )
+  }
+
   override fun getSupportedRestrictions(): Set<String> = SUPPORTED_RESTRICTIONS
 
   override fun meta(instance: MetaInfoAware): MetaInfo {
@@ -30,12 +40,4 @@ class C8TaskSubscriptionApiImpl(
     return CompletableFuture.completedFuture(Empty)
   }
 
-  private companion object {
-    // The common subset of the C8 external-task and user-task delivery strategies.
-    val SUPPORTED_RESTRICTIONS = setOf(
-      CommonRestrictions.TENANT_ID,
-      CommonRestrictions.PROCESS_INSTANCE_ID,
-      CommonRestrictions.PROCESS_DEFINITION_ID,
-    )
-  }
 }
