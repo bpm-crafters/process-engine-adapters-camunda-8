@@ -81,26 +81,14 @@
     </dependency>
 
     <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>camunda-process-test-spring-boot-3</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>com.tngtech.jgiven</groupId>
-      <artifactId>jgiven-core</artifactId>
-      <version>${jgiven.version}</version>
+      <groupId>dev.bpm-crafters.process-engine-api-testing</groupId>
+      <artifactId>process-engine-api-testing-jgiven</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.tngtech.jgiven</groupId>
-      <artifactId>jgiven-junit5</artifactId>
-      <version>${jgiven.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.awaitility</groupId>
-      <artifactId>awaitility-kotlin</artifactId>
+      <groupId>dev.bpm-crafters.process-engine-adapters</groupId>
+      <artifactId>process-engine-adapter-camunda-platform-c8-process-testing</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

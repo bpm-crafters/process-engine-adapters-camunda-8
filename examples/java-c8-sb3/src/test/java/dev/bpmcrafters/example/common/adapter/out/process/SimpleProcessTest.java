@@ -1,124 +1,117 @@
 package dev.bpmcrafters.example.common.adapter.out.process;
 
-import com.tngtech.jgiven.junit5.DualScenarioTest;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst;
 import dev.bpmcrafters.example.common.adapter.shared.SimpleProcessWorkflowConst.Elements;
-import dev.bpmcrafters.processengineapi.CommonRestrictions;
-import io.camunda.client.CamundaClient;
-import io.camunda.process.test.api.CamundaProcessTest;
-import io.camunda.process.test.api.CamundaProcessTestContext;
+import dev.bpmcrafters.processengineapi.testing.config.UseProcessTestInitializer;
+import dev.bpmcrafters.processengineapi.testing.jgiven.ProcessScenarioTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-@CamundaProcessTest
-public class SimpleProcessTest extends DualScenarioTest<SimpleProcessStages.ActionStage, SimpleProcessStages.AssertStage> {
-
-  private CamundaClient client;
-  private CamundaProcessTestContext processTestContext;
-
+@UseProcessTestInitializer(qualifier = "c8")
+public class SimpleProcessTest extends ProcessScenarioTest<SimpleProcessStages.SimpleActionStage, SimpleProcessStages.SimpleAssertStage> {
   @BeforeEach
-  public void setup() {
+  public void setup() { given().processIsDeployed(SimpleProcessWorkflowConst.BPMN); }
+
+  @Test
+  public void shouldStartProcessAndRunHappyPath() {
     given()
-      .initializeEngine(
-        client,
-        processTestContext,
-        CommonRestrictions.builder()
-          .withProcessDefinitionKey(SimpleProcessWorkflowConst.KEY)
-          .build())
+      .simpleProcessStarted("test", 123)
+    ;
+
+    when()
+      .serviceExecuteActionIsCompleted("value1")
       .and()
-      .process_is_deployed(SimpleProcessWorkflowConst.BPMN);
+      .userTaskPerformTaskIsCompleted("user-task-value")
+      .and()
+      .serviceSendEmailIsCompleted()
+      .and()
+      .messageReceived("message-value")
+    ;
+
+    then()
+      .processIsFinished()
+      .and()
+      .processHasPassed(Elements.END_EVENT)
+    ;
   }
 
   @Test
-  public void should_start_process_and_run_happy_path() {
+  public void shouldStartProcessAndUseRetriesIfServiceTaskFails() {
     given()
-      .simple_process_started("test", 123);
+      .simpleProcessStarted("test", 123)
+    ;
 
     when()
-      .service_execute_action_is_completed("value1")
+      .serviceExecuteActionIsFailed(1)
       .and()
-      .process_waits_in(Elements.USER_TASK_PERFORM_TASK)
-      .and()
-      .task_is_assigned_to_user("kermit")
-      .and()
-      .user_task_perform_task_is_completed("user-task-value")
-      .and()
-      .service_send_email_is_completed()
-      .and()
-      .message_received("message-value");
+      .serviceExecuteActionIsFailed(0)
+    ;
 
     then()
-      .process_is_finished()
-      .and()
-      .process_has_passed(Elements.END_EVENT);
+      .processHasIncidents(java.util.Map.of())
+    ;
   }
 
   @Test
-  public void should_start_process_and_use_retries_if_service_task_fails() {
+  public void shouldStartProcessAndHandleServiceTaskError() {
     given()
-      .simple_process_started("test", 123);
+      .simpleProcessStarted("test", 123)
+    ;
 
     when()
-      .service_execute_action_is_failed(1)
+      .serviceExecuteActionIsCompletedWithError()
       .and()
-      .service_execute_action_is_failed(0);
+      .signalOccurred()
+    ;
 
     then()
-      .process_has_incidents();
+      .processIsFinished()
+      .and()
+      .processHasPassed(Elements.END_EVENT_ABNORMALLY)
+    ;
   }
 
   @Test
-  public void should_start_process_and_handle_service_task_error() {
+  public void shouldStartProcessAndHandleUserTaskTimeout() {
     given()
-      .simple_process_started("test", 123);
+      .simpleProcessStarted("test", 123)
+    ;
 
     when()
-      .service_execute_action_is_completed_with_error()
+      .serviceExecuteActionIsCompleted("value1")
       .and()
-      .signal_occurred();
+      .userTaskPerformTaskIsTimedOut()
+      .and()
+      .signalOccurred()
+    ;
 
     then()
-      .process_is_finished()
+      .processIsFinished()
       .and()
-      .process_has_passed(Elements.END_EVENT_ABNORMALLY);
-  }
-
-  @Test
-  public void should_start_process_and_handle_user_task_timeout() {
-    given()
-      .simple_process_started("test", 123);
-
-    when()
-      .service_execute_action_is_completed("value1")
-      .and()
-      .user_task_perform_task_is_timed_out()
-      .and()
-      .signal_occurred();
-
-    then()
-      .process_is_finished()
-      .and()
-      .process_has_passed(Elements.END_EVENT_ABNORMALLY);
+      .processHasPassed(Elements.END_EVENT_ABNORMALLY)
+    ;
   }
 
   @Test
   @Disabled("not working for native user tasks")
-  public void should_start_process_and_handle_user_task_error() {
+  public void shouldStartProcessAndHandleUserTaskError() {
     given()
-      .simple_process_started("test", 123);
+      .simpleProcessStarted("test", 123)
+    ;
 
     when()
-      .service_execute_action_is_completed("value1")
+      .serviceExecuteActionIsCompleted("value1")
       .and()
-      .user_task_perform_task_is_completed_with_error("task error value")
+      .userTaskPerformTaskIsCompletedWithError("task error value")
       .and()
-      .signal_occurred();
+      .signalOccurred()
+    ;
 
     then()
-      .process_is_finished()
+      .processIsFinished()
       .and()
-      .process_has_passed(Elements.END_EVENT_ABNORMALLY);
+      .processHasPassed(Elements.END_EVENT_ABNORMALLY)
+    ;
   }
-
 }
