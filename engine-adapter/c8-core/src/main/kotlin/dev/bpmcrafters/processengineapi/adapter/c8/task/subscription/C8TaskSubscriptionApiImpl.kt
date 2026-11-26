@@ -23,7 +23,8 @@ class C8TaskSubscriptionApiImpl(
       CommonRestrictions.TENANT_ID,
       CommonRestrictions.PROCESS_INSTANCE_ID,
       CommonRestrictions.PROCESS_DEFINITION_ID,
-      CommonRestrictions.PROCESS_DEFINITION_KEY
+      CommonRestrictions.PROCESS_DEFINITION_KEY,
+      CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS
     )
   }
 
