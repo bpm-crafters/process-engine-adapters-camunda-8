@@ -1,6 +1,8 @@
 package dev.bpmcrafters.processengineapi.adapter.c8.springboot.subscription
 
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.*
+import dev.bpmcrafters.processengineapi.lifecycle.ProcessApplicationLifecycle
+import dev.bpmcrafters.processengineapi.lifecycle.ProcessApplicationPhase
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.ServiceTaskDeliveryStrategy.SUBSCRIPTION
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.LISTENER
 import dev.bpmcrafters.processengineapi.adapter.c8.springboot.C8AdapterProperties.UserTaskDeliveryStrategy.SUBSCRIPTION_REFRESHING
@@ -31,24 +33,28 @@ class C8SubscriptionAutoConfiguration {
   @Bean("c8-service-task-delivery-subscription")
   @ConditionalOnServiceTaskDeliveryStrategy(strategy = SUBSCRIPTION)
   fun subscribingServiceTaskDeliveryBinding(
+    lifecycle: ProcessApplicationLifecycle,
     @Qualifier("c8-service-task-delivery")
     subscribingServiceTaskDelivery: SubscribingServiceTaskDelivery
-  ): SubscribingServiceTaskDeliveryBinding {
-    return SubscribingServiceTaskDeliveryBinding(
+  ): SubscribingServiceTaskDeliveryBinding = SubscribingServiceTaskDeliveryBinding(
       subscribingServiceTaskDelivery = subscribingServiceTaskDelivery
-    )
-  }
+    ).also { binding ->
+      lifecycle.registerParticipant(ProcessApplicationPhase.RUNNING) { binding.start() }
+      lifecycle.registerParticipant(ProcessApplicationPhase.STOPPING) { binding.stop() }
+    }
 
   @Bean("c8-user-task-delivery-subscription")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = SUBSCRIPTION_REFRESHING)
   fun subscribingUserTaskDeliveryBinding(
+    lifecycle: ProcessApplicationLifecycle,
     @Qualifier("c8-user-task-delivery")
     subscribingRefreshingZeebeJobUserTaskDelivery: SubscribingRefreshingZeebeJobUserTaskDelivery,
-  ): SubscribingUserTaskDeliveryBinding {
-    return SubscribingUserTaskDeliveryBinding(
+  ): SubscribingUserTaskDeliveryBinding = SubscribingUserTaskDeliveryBinding(
       subscribingRefreshingZeebeJobUserTaskDelivery = subscribingRefreshingZeebeJobUserTaskDelivery
-    )
-  }
+    ).also { binding ->
+      lifecycle.registerParticipant(ProcessApplicationPhase.RUNNING) { binding.start() }
+      lifecycle.registerParticipant(ProcessApplicationPhase.STOPPING) { binding.stop() }
+    }
 
   @Bean
   @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
@@ -69,18 +75,20 @@ class C8SubscriptionAutoConfiguration {
   @Bean("c8-user-task-delivery-subscription")
   @ConditionalOnUserTaskDeliveryStrategy(strategy = LISTENER)
   fun userTaskListenerDeliveryBinding(
+    lifecycle: ProcessApplicationLifecycle,
     @Qualifier("c8-user-task-delivery")
     listenerUserTaskDelivery: ListenerUserTaskDelivery,
     @Qualifier("c8-user-task-listener-preload-delivery")
     listenerPreloadUserTaskDelivery: PullUserTaskDelivery,
     globalUserTaskListenerRegistrationHelper: GlobalUserTaskListenerRegistrationHelper,
     c8AdapterProperties: C8AdapterProperties,
-  ): UserTaskListenerDeliveryBinding {
-    return UserTaskListenerDeliveryBinding(
+  ): UserTaskListenerDeliveryBinding = UserTaskListenerDeliveryBinding(
       listenerUserTaskDelivery = listenerUserTaskDelivery,
       listenerPreloadUserTaskDelivery = listenerPreloadUserTaskDelivery,
       globalUserTaskListenerRegistrationHelper = globalUserTaskListenerRegistrationHelper,
       c8AdapterProperties = c8AdapterProperties
-    )
-  }
+    ).also { binding ->
+      lifecycle.registerParticipant(ProcessApplicationPhase.RUNNING) { binding.start() }
+      lifecycle.registerParticipant(ProcessApplicationPhase.STOPPING) { binding.stop() }
+    }
 }

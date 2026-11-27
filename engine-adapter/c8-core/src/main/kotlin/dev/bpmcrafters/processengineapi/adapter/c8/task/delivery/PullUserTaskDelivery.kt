@@ -114,7 +114,7 @@ class PullUserTaskDelivery(
     this.taskType == TaskType.USER
       && (this.taskDescriptionKey == null || this.taskDescriptionKey == task.elementId)
       && this.restrictions
-      .minus( // ignore some restrictions that are not relevant for external tasks or handled differntly
+      .minus( // ignore some restrictions that are not relevant for external tasks or handled differently
         CommonRestrictions.WORKER_LOCK_DURATION_IN_MILLISECONDS
       )
       .all {
