@@ -111,6 +111,31 @@ class SubscribingServiceTaskDeliveryTest {
   }
 
   @Test
+  fun `should match service tasks by BPMN process ID`() {
+    val subscription = TaskSubscriptionHandle(
+      taskType = TaskType.EXTERNAL,
+      taskDescriptionKey = TOPIC,
+      restrictions = mapOf(CommonRestrictions.PROCESS_DEFINITION_KEY to "my-process"),
+      payloadDescription = null,
+      action = { _, _ -> },
+      termination = { _ -> }
+    )
+    val matchingJob = mock<ActivatedJob> {
+      whenever(it.type).thenReturn(TOPIC)
+      whenever(it.bpmnProcessId).thenReturn("my-process")
+    }
+    val otherJob = mock<ActivatedJob> {
+      whenever(it.type).thenReturn(TOPIC)
+      whenever(it.bpmnProcessId).thenReturn("other-process")
+    }
+
+    with(delivery) {
+      assertThat(subscription.matches(matchingJob)).isTrue()
+      assertThat(subscription.matches(otherJob)).isFalse()
+    }
+  }
+
+  @Test
   fun `should match and ignore workerLockDurationInMilliseconds restriction`() {
     val subscription = TaskSubscriptionHandle(
       taskType = TaskType.EXTERNAL,
