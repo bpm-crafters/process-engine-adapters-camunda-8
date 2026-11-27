@@ -34,7 +34,10 @@ First add the corresponding adapter to your project's classpath:
 </dependencies>
 ```
 
-and configure the adapter in your application properties:
+Declare `org.springframework.boot:spring-boot-starter-validation` in your application if you use Bean Validation.
+The adapter declares it as an optional dependency.
+
+Configure the adapter in your application properties:
 
 ```yaml
 
