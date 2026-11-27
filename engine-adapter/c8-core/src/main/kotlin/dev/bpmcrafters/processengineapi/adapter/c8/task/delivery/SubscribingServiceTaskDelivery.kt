@@ -114,6 +114,7 @@ class SubscribingServiceTaskDelivery(
         CommonRestrictions.TENANT_ID -> it.value == job.tenantId
         CommonRestrictions.PROCESS_INSTANCE_ID -> it.value == "${job.processInstanceKey}"
         CommonRestrictions.PROCESS_DEFINITION_ID -> it.value == "${job.processDefinitionKey}"
+        CommonRestrictions.PROCESS_DEFINITION_KEY -> it.value == job.bpmnProcessId
         else -> false
       }
     }
