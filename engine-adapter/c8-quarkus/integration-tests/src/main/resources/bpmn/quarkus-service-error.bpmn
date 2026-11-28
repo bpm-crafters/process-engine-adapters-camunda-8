@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_QuarkusServiceError" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="quarkus-service-error" name="Quarkus service error" isExecutable="true">
+    <bpmn:startEvent id="Started" name="Started">
+      <bpmn:outgoing>Flow_ExecuteService</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="ExecuteService" name="Execute service">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="quarkus-service-error" retries="3" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ExecuteService</bpmn:incoming>
+      <bpmn:outgoing>Flow_ServiceCompleted</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="ServiceCompleted" name="Service completed">
+      <bpmn:incoming>Flow_ServiceCompleted</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="ServiceError" name="Service error" attachedToRef="ExecuteService" cancelActivity="true">
+      <bpmn:outgoing>Flow_ErrorHandled</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ServiceErrorDefinition" errorRef="QuarkusError" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="ErrorHandled" name="Error handled">
+      <bpmn:incoming>Flow_ErrorHandled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ExecuteService" sourceRef="Started" targetRef="ExecuteService" />
+    <bpmn:sequenceFlow id="Flow_ServiceCompleted" sourceRef="ExecuteService" targetRef="ServiceCompleted" />
+    <bpmn:sequenceFlow id="Flow_ErrorHandled" sourceRef="ServiceError" targetRef="ErrorHandled" />
+  </bpmn:process>
+  <bpmn:error id="QuarkusError" name="Quarkus error" errorCode="quarkus-error" />
+  <bpmndi:BPMNDiagram id="Diagram_QuarkusServiceError">
+    <bpmndi:BPMNPlane id="Plane_QuarkusServiceError" bpmnElement="quarkus-service-error">
+      <bpmndi:BPMNShape id="Started_di" bpmnElement="Started">
+        <dc:Bounds x="160" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="165" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ExecuteService_di" bpmnElement="ExecuteService">
+        <dc:Bounds x="280" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceCompleted_di" bpmnElement="ServiceCompleted">
+        <dc:Bounds x="464" y="122" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="438" y="165" width="88" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceError_di" bpmnElement="ServiceError">
+        <dc:Bounds x="312" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="243" y="201" width="65" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ErrorHandled_di" bpmnElement="ErrorHandled">
+        <dc:Bounds x="464" y="282" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="448" y="325" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ExecuteService_di" bpmnElement="Flow_ExecuteService">
+        <di:waypoint x="196" y="140" />
+        <di:waypoint x="280" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ServiceCompleted_di" bpmnElement="Flow_ServiceCompleted">
+        <di:waypoint x="380" y="140" />
+        <di:waypoint x="464" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ErrorHandled_di" bpmnElement="Flow_ErrorHandled">
+        <di:waypoint x="330" y="198" />
+        <di:waypoint x="330" y="300" />
+        <di:waypoint x="464" y="300" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

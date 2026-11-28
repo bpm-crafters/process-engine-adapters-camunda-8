@@ -26,7 +26,9 @@
 
     <!-- C8 -->
     <camunda.version>8.10.10</camunda.version>
+    <camunda.test.version>${camunda.version}</camunda.test.version>
     <spring-boot.version>4.1.0</spring-boot.version>
+    <quarkus.version>3.40.1.1</quarkus.version>
 
     <!-- TEST -->
     <mockito.version>6.4.0</mockito.version>
@@ -44,6 +46,7 @@
     <module>engine-adapter/c8-core</module>
     <module>engine-adapter/c8-testing</module>
     <module>engine-adapter/c8-spring-boot-starter</module>
+    <module>engine-adapter/c8-quarkus</module>
     <module>bom</module>
     <!-- more modules see profiles -->
   </modules>

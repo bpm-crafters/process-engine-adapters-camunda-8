@@ -1,0 +1,36 @@
+@base = http://localhost:18083/simple-service-tasks
+
+### Deploy the shared process model (201 with Location)
+POST {{base}}/deploy
+
+### Happy path: save this IDE-local UUID for message correlation
+< {%
+  const key = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.floor(Math.random() * 16);
+    return (c === "x" ? r : (r & 3) | 8).toString(16);
+  });
+  client.global.set("correlationKey", key);
+%}
+POST {{base}}/start-process?value={{correlationKey}}&intValue=123
+
+### Wait for listener delivery; copy the taskId below
+GET {{base}}/tasks
+
+### Complete before the one-minute timer expires
+@taskId = REPLACE_WITH_TASK_ID
+POST {{base}}/tasks/{{taskId}}/complete?value=user-task-value
+
+### Automatic send-message worker runs, then message1 is waiting
+POST {{base}}/correlate/{{correlationKey}}?value=message-value
+
+### Business error: 42 takes action_error, then waits for signal1
+POST {{base}}/start-process?value={{$uuid}}&intValue=42
+
+### Broadcast after received_signal becomes active (inspect Operate)
+POST {{base}}/signal?value=signal-value
+
+### Timer: start, leave its user task untouched for one minute, then send signal above
+POST {{base}}/start-process?value={{$uuid}}&intValue=123
+
+### Unsupported native user-task BPMN error: 501; task remains active
+POST {{base}}/tasks/{{taskId}}/error?value=task-error-value
